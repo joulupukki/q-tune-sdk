@@ -1,0 +1,42 @@
+# sdkconfig.defaults — example_tuner plugin
+#
+# These settings mirror the firmware's LVGL configuration so that the compiled
+# .so shares the same struct layouts and symbol sizes as the firmware binary.
+# The loader rejects a plugin whose LVGL major.minor does not match the firmware,
+# so DO NOT change CONFIG_LV_COLOR_DEPTH or any struct-layout-affecting option.
+#
+# This file is consumed by `idf.py build` (via menuconfig defaults). Only the
+# settings relevant to the plugin build are listed; everything else uses the
+# IDF/LVGL component defaults.
+
+# --- LVGL version lock (must match firmware: 9.2.2) -----------------------
+# (Enforced by idf_component.yml pinning lvgl/lvgl to ==9.2.2)
+
+# --- Color depth: 16-bit RGB565 — MANDATORY, must match firmware ----------
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_COLOR_DEPTH=16
+
+# --- OS integration: FreeRTOS ---------------------------------------------
+CONFIG_LV_OS_FREERTOS=y
+CONFIG_LV_USE_OS=2
+
+# --- Memory management ----------------------------------------------------
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_BUILTIN_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+
+# --- Widgets used by this example -----------------------------------------
+CONFIG_LV_USE_LABEL=y
+CONFIG_LV_USE_ARC=y
+
+# --- Fonts used by this example -------------------------------------------
+# Montserrat 14 is the minimum (used by the ref-freq label).
+# Montserrat 48 is used by the main note-name label.
+# If the firmware is built without 48pt, fall back to 28pt and update the
+# source accordingly.
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_MONTSERRAT_48=y
+CONFIG_LV_FONT_DEFAULT_MONTSERRAT_18=y
+
+# --- Shared object support (required by project_so macro) -----------------
+CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=y

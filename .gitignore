@@ -1,0 +1,10 @@
+# ESP-IDF build artifacts for the example plugin projects
+**/build/
+**/managed_components/
+**/sdkconfig
+**/sdkconfig.old
+**/dependencies.lock
+
+# Editor / language-server caches
+**/.cache/
+.vscode/

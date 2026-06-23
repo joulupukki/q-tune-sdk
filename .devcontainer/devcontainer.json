@@ -1,0 +1,22 @@
+{
+  "name": "q-tune-sdk (ESP-IDF v5.3.2)",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "containerEnv": {
+    "IDF_TARGET": "esp32s3"
+  },
+  "workspaceFolder": "/workspaces/q-tune-sdk",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/q-tune-sdk,type=bind",
+  "overrideCommand": true,
+  "postCreateCommand": "git config --global --add safe.directory /workspaces/q-tune-sdk && echo '. $IDF_PATH/export.sh > /dev/null 2>&1' >> ~/.bashrc",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "espressif.esp-idf-extension",
+        "ms-vscode.cpptools"
+      ]
+    }
+  }
+}
