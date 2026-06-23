@@ -12,7 +12,9 @@ project(example_standby)
 # <repo>/examples/example_standby). When you copy this example OUT of the SDK
 # repo, change THIS ONE LINE to point at your local q-tune-sdk checkout, e.g.
 #   set(QTUNE_SDK_DIR "$ENV{HOME}/src/q-tune-sdk")
-set(QTUNE_SDK_DIR "${CMAKE_SOURCE_DIR}/../..")
+if(NOT DEFINED QTUNE_SDK_DIR)
+    set(QTUNE_SDK_DIR "${CMAKE_SOURCE_DIR}/../..")  # default: SDK repo root
+endif()
 
 # Publish the SDK + LVGL include roots into the global build properties so the
 # standalone .so compile (qtune_project_so) can find the headers.

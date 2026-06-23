@@ -12,7 +12,9 @@ project(example_tuner)
 # <repo>/examples/example_tuner). When you copy this example OUT of the SDK repo,
 # change THIS ONE LINE to point at your local q-tune-sdk checkout, e.g.
 #   set(QTUNE_SDK_DIR "$ENV{HOME}/src/q-tune-sdk")
-set(QTUNE_SDK_DIR "${CMAKE_SOURCE_DIR}/../..")
+if(NOT DEFINED QTUNE_SDK_DIR)
+    set(QTUNE_SDK_DIR "${CMAKE_SOURCE_DIR}/../..")  # default: SDK repo root
+endif()
 
 # qtune_project_so() compiles the plugin source standalone using only the GLOBAL
 # COMPILE_INCLUDE_DIRECTORIES / COMPILE_DEFINITIONS build properties — it does NOT

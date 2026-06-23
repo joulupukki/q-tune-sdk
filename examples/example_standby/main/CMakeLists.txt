@@ -13,7 +13,9 @@
 
 # q-tune-sdk repo root (component scope does not inherit the root CMakeLists'
 # variable, so recompute it here). CMAKE_SOURCE_DIR is the top-level project dir.
-set(QTUNE_SDK_DIR "${CMAKE_SOURCE_DIR}/../..")
+if(NOT DEFINED QTUNE_SDK_DIR)
+    set(QTUNE_SDK_DIR "${CMAKE_SOURCE_DIR}/../..")  # default: SDK repo root
+endif()
 
 idf_component_register(
     SRCS
