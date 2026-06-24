@@ -52,11 +52,16 @@ echo "Mounting:           ${MOUNT} -> /work"
 echo "Using image:        ${IMAGE}"
 
 # The base image's entrypoint sources $IDF_PATH/export.sh before exec'ing the
-# command, so idf.py is on PATH. set-target makes the build use esp32s3 even on
-# a fresh checkout with no sdkconfig.
+# command, so idf.py is on PATH.
+#
+# IMPORTANT: only run `idf.py set-target` when the project is NOT already
+# configured for esp32s3. set-target wipes the build configuration, which forces
+# a full from-scratch rebuild of LVGL + ESP-IDF every time. Skipping it on
+# subsequent builds makes them incremental — editing one plugin source then
+# recompiles just that file and relinks the .so.
 exec docker run --rm -t \
   -v "${MOUNT}":/work \
   -w "${WORKDIR}" \
   -e IDF_TARGET=esp32s3 \
   "${IMAGE}" \
-  sh -c "idf.py set-target esp32s3 && idf.py build"
+  sh -c 'grep -q "CONFIG_IDF_TARGET=\"esp32s3\"" sdkconfig 2>/dev/null || idf.py set-target esp32s3; idf.py build'
