@@ -52,18 +52,25 @@ EXPECTED_LVGL = (9, 2)
 DESCRIPTOR_SYMBOL = "qtune_plugin_descriptor"
 TYPE_NAMES = {1: "TUNER", 2: "STANDBY"}
 
-# libc / libm / compiler-runtime symbols the loader also resolves. Not
-# exhaustive: anything unknown that is NOT an lv_* is reported as a warning, not
-# an error, because we cannot enumerate the firmware's libc/esp-idf exports here.
-LIBC_MATH = {
-    "memcpy", "memmove", "memset", "memcmp", "strlen", "strcpy", "strncpy",
-    "strcmp", "strncmp", "strcat", "strncat", "strchr", "strstr", "strtol",
-    "snprintf", "sprintf", "vsnprintf", "printf", "puts", "putchar", "fputs",
-    "malloc", "free", "calloc", "realloc", "abort", "memset_s",
-    "sinf", "cosf", "tanf", "asinf", "acosf", "atanf", "atan2f", "fabsf",
-    "fabs", "sqrtf", "sqrt", "powf", "pow", "expf", "logf", "log2f", "log10f",
-    "floorf", "ceilf", "roundf", "fmodf", "fminf", "fmaxf", "copysignf",
-    "__errno",
+# Symbols the espressif/elf_loader component itself exports (its built-in libc /
+# libm / lwIP / pthread table), in addition to the firmware's curated table in
+# ALLOWED_SYMBOLS.md. A plugin can resolve a symbol iff it is in the UNION of
+# these two sets. This list is from elf_loader >= 1.3.x (src/esp_elf_symbol.c).
+# NOTE: it deliberately does NOT include snprintf or any <math.h> functions —
+# those are provided by the firmware's curated table, so a plugin that uses them
+# only loads on firmware new enough to export them.
+ELF_LOADER_BUILTINS = {
+    "calloc", "clock_gettime", "close", "ets_printf", "exit", "fprintf",
+    "fputc", "fputs", "free", "fwrite", "getopt_long", "ip4addr_ntoa",
+    "ipaddr_addr", "longjmp", "malloc", "memcpy", "memset", "optarg", "opterr",
+    "optind", "optopt", "printf", "putchar", "puts", "realloc", "setjmp",
+    "sleep", "strchr", "strcmp", "strcspn", "strerror", "strftime", "strlen",
+    "strncat", "strrchr", "strtod", "strtol", "usleep", "vfprintf", "_ctype_",
+    "lwip_accept", "lwip_bind", "lwip_connect", "lwip_htonl", "lwip_htons",
+    "lwip_listen", "lwip_recv", "lwip_recvfrom", "lwip_send", "lwip_sendto",
+    "lwip_setsockopt", "lwip_socket", "pthread_attr_init",
+    "pthread_attr_setstacksize", "pthread_create", "pthread_detach",
+    "pthread_exit", "pthread_join",
 }
 
 
@@ -204,22 +211,24 @@ def main() -> int:
                     print(f"  abi_version:  {abi}")
                     print(f"  lvgl_version: {plv[0]}.{plv[1]}.{plv[2]}")
 
-        # Undefined-symbol allowlist check.
-        allowed = read_allowlist()
+        # Undefined-symbol check: a symbol resolves iff it is in the firmware's
+        # curated table (ALLOWED_SYMBOLS.md) or elf_loader's built-in table.
+        resolvable = read_allowlist() | ELF_LOADER_BUILTINS
         for name in undefined_dynsyms(elf):
-            if name == DESCRIPTOR_SYMBOL or name in allowed or name in LIBC_MATH:
+            if name == DESCRIPTOR_SYMBOL or name in resolvable:
                 continue
             if name.startswith("__"):
-                continue  # compiler runtime / builtins
+                continue  # compiler runtime (libgcc) — resolved by the loader
             if name.startswith("lv_"):
                 errors.append(
                     f"references unexported LVGL symbol '{name}' — not in "
                     "docs/ALLOWED_SYMBOLS.md. The plugin will fail to load.")
             else:
-                warnings.append(
-                    f"references '{name}', not in the SDK allowlist. If it is a "
-                    "libc/ESP-IDF symbol the firmware exports, this is fine; "
-                    "otherwise the plugin will fail to load.")
+                errors.append(
+                    f"references '{name}', which the firmware does not export "
+                    "(not in docs/ALLOWED_SYMBOLS.md nor elf_loader's libc). The "
+                    "plugin will fail to load — request it be added to the "
+                    "firmware's qtune_plugin_symbols.txt.")
 
     for w in warnings:
         print(f"  WARN: {w}")

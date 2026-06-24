@@ -5,7 +5,7 @@
 
 These are the **only** host symbols a Q-Tune plugin may reference. They are resolved by the firmware's ELF loader at load time; calling any other `lv_*` (or firmware) function leaves an unresolved relocation and the plugin will fail to load.
 
-Total exported symbols: **153**.
+Total exported symbols: **170**.
 
 In addition to the symbols below, standard C library functions (`printf`, `snprintf`, `memcpy`, `memset`, `malloc`, `free`, `strncpy`, …) and `<math.h>` functions (`fabsf`, `log2f`, `powf`, `roundf`, …) are available.
 
@@ -100,6 +100,10 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 ## LVGL fonts
 
 `lv_font_montserrat_14`, `lv_font_montserrat_18`, `lv_font_montserrat_24`, `lv_font_montserrat_26`, `lv_font_montserrat_28`, `lv_font_montserrat_40`, `lv_font_montserrat_48`
+
+## libc / libm subset
+
+`snprintf`, `vsnprintf`, `strncpy`, `strncmp`, `fabsf`, `roundf`, `floorf`, `ceilf`, `powf`, `log2f`, `logf`, `expf`, `sqrtf`, `fmodf`, `sinf`, `cosf`, `atan2f`
 
 ---
 
