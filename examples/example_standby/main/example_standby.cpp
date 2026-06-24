@@ -65,6 +65,12 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .sdk_build    = "example-sdk-1.0",
     .interface    = &es_interface,
 };
+
+// Entry function the firmware calls at load time. Required: the ELF loader's
+// dlsym() finds only function symbols, not the descriptor data object above.
+QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
+    return &qtune_plugin_descriptor;
+}
 }
 
 // ---------------------------------------------------------------------------

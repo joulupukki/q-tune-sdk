@@ -49,7 +49,8 @@ ALLOWED_DOC = SDK_ROOT / "docs" / "ALLOWED_SYMBOLS.md"
 # tools/sync_sdk.py at release time; override on the CLI with --lvgl if needed.
 EXPECTED_LVGL = (9, 2)
 
-DESCRIPTOR_SYMBOL = "qtune_plugin_descriptor"
+DESCRIPTOR_SYMBOL = "qtune_plugin_descriptor"   # data object (validator reads it)
+ENTRY_SYMBOL = "qtune_plugin_entry"             # function (the loader calls it)
 TYPE_NAMES = {1: "TUNER", 2: "STANDBY"}
 
 # Symbols the espressif/elf_loader component itself exports (its built-in libc /
@@ -172,21 +173,26 @@ def main() -> int:
             errors.append(f"ELF type is {elf['e_type']}, expected ET_DYN "
                           "(shared object). Did the build link with -shared?")
 
+        # The loader resolves the descriptor by calling the entry FUNCTION, so it
+        # must be present in .dynsym (the data descriptor symbol is invisible to
+        # the loader's function-only dlsym).
+        dynsym = elf.get_section_by_name(".dynsym")
+        entry = isinstance(dynsym, SymbolTableSection) and any(
+            s.name == ENTRY_SYMBOL and s.entry.st_info.type == "STT_FUNC"
+            for s in dynsym.iter_symbols())
+        if not entry:
+            errors.append(
+                f"missing exported function '{ENTRY_SYMBOL}'. Every plugin must "
+                f"export `const QTunePluginDescriptor *{ENTRY_SYMBOL}(void)` "
+                "(the ELF loader's dlsym resolves only functions, not the "
+                "descriptor data object).")
+
         sym = find_symbol(elf, DESCRIPTOR_SYMBOL)
         if sym is None:
             errors.append(
                 f"missing exported symbol '{DESCRIPTOR_SYMBOL}'. Declare the "
                 "descriptor with QTUNE_PLUGIN_EXPORT inside extern \"C\".")
         else:
-            # Confirm it is visible in .dynsym (where dlsym looks).
-            dynsym = elf.get_section_by_name(".dynsym")
-            in_dynsym = isinstance(dynsym, SymbolTableSection) and any(
-                s.name == DESCRIPTOR_SYMBOL for s in dynsym.iter_symbols())
-            if not in_dynsym:
-                errors.append(
-                    f"'{DESCRIPTOR_SYMBOL}' is not in .dynsym — dlsym() will not "
-                    "find it. Use QTUNE_PLUGIN_EXPORT (default visibility).")
-
             desc = read_descriptor(elf, sym)
             if desc is None:
                 warnings.append("could not read descriptor bytes statically; "

@@ -55,13 +55,26 @@ typedef struct {
     const void     *interface;    // -> TunerGUIInterface* or TunerStandbyGUIInterface*
 } QTunePluginDescriptor;
 
-// Well-known exported symbol the loader looks up in each .so.
+// Well-known data symbol holding the descriptor. The offline SDK validator
+// reads this statically from the .so to check the version fields. NOTE: the
+// firmware does NOT use this symbol at load time — see the entry function below.
 #define QTUNE_PLUGIN_DESCRIPTOR_SYMBOL "qtune_plugin_descriptor"
 
-// The plugin SDK builds .so files with -fvisibility=hidden and --strip-all, so the
-// descriptor must be explicitly given default visibility to survive into .dynsym
-// where dlsym() can find it. Plugins declare the descriptor with this macro:
-//   QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = { ... };
+// The ESP32 ELF loader resolves only FUNCTION (STT_FUNC) symbols in a loaded
+// module via dlsym() — never data objects. So every plugin MUST also export an
+// entry FUNCTION under this name that returns a pointer to its descriptor; the
+// firmware calls it to obtain the descriptor at load time:
+//
+//   extern "C" QTUNE_PLUGIN_EXPORT
+//   const QTunePluginDescriptor *qtune_plugin_entry(void) {
+//       return &qtune_plugin_descriptor;
+//   }
+#define QTUNE_PLUGIN_ENTRY_SYMBOL "qtune_plugin_entry"
+typedef const QTunePluginDescriptor *(*QTunePluginEntryFn)(void);
+
+// The plugin SDK builds .so files with -fvisibility=hidden and --strip-all, so
+// exported symbols must be explicitly given default visibility to survive into
+// .dynsym. Declare the descriptor and the entry function with this macro.
 #define QTUNE_PLUGIN_EXPORT __attribute__((used, visibility("default")))
 
 // Reserved ID ranges for plugin-provided UIs so they never collide with built-ins.

@@ -33,7 +33,7 @@ develop and **sell** plugins built with this SDK.
   ───────────────────────────
   example_tuner.cpp
       implements TunerGUIInterface
-      exports   qtune_plugin_descriptor
+      exports   qtune_plugin_entry()  (+ descriptor)
         │
         │  idf.py build
         ▼
@@ -46,7 +46,7 @@ develop and **sell** plugins built with this SDK.
         │  at boot: espressif/elf_loader reads .so,
         │           resolves undefined symbols against
         │           the firmware's export table,
-        │           dlsym()s qtune_plugin_descriptor,
+        │           dlsym()s qtune_plugin_entry(),
         │           validates versions,
         │           registers the interface
         ▼
@@ -179,13 +179,23 @@ q-tune-sdk/
 
 ## 4. The descriptor contract
 
-Every plugin `.so` must export **exactly one** symbol with C linkage named
-`qtune_plugin_descriptor` (the value of `QTUNE_PLUGIN_DESCRIPTOR_SYMBOL`).
-Declare it with `QTUNE_PLUGIN_EXPORT` to give it default ELF visibility so it
-survives `--strip-all` and appears in `.dynsym` where `dlsym()` can find it.
+Every plugin `.so` exports two things, both with C linkage (C++ name mangling
+would hide them) and `QTUNE_PLUGIN_EXPORT` (default ELF visibility so they
+survive `--strip-all`):
+
+1. The **descriptor** data object `qtune_plugin_descriptor` — read statically by
+   the SDK validator to check versions.
+2. The **entry function** `qtune_plugin_entry()`, returning a pointer to that
+   descriptor. The firmware calls this to obtain the descriptor at load time.
+
+> Why a function *and* a data object? The ESP32 ELF loader's `dlsym()` resolves
+> only **function** symbols in a loaded module, never data objects — so the
+> firmware cannot read the descriptor data symbol directly. Exporting the small
+> entry function is what makes the descriptor reachable. (Omitting it is the
+> classic *"missing symbol 'qtune_plugin_entry'"* load failure.)
 
 ```cpp
-// In your .cpp file — C linkage is required; C++ name mangling would hide it.
+// In your .cpp file.
 extern "C" {
 QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .abi_version  = QTUNE_PLUGIN_ABI_VERSION,   // must match firmware
@@ -195,6 +205,11 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .interface    = &my_interface,               // -> TunerGUIInterface or
                                                  //    TunerStandbyGUIInterface
 };
+
+// Required entry point — the loader resolves this function, not the data above.
+QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
+    return &qtune_plugin_descriptor;
+}
 }
 ```
 
