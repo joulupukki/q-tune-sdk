@@ -39,7 +39,13 @@ develop and **sell** plugins built with this SDK.
         ▼
   example_tuner.so   ← position-independent, all internals hidden
         │
-        │  upload via http://<device-ip>/plugins
+        │  Upload via http://<device-ip>/plugins in Wi-Fi mode.
+        │
+        │                          or
+        │
+        │  Use USB Drive mode (press and hold the foot switch
+        │  at power up) and drop *.so file(s) into the /plugins
+        │  directory.
         ▼
   /data/plugins/example_tuner.so   (internal flash, FAT32)
         │
@@ -115,9 +121,18 @@ Then, in **every shell** before running `idf.py`, source the export script
 ### Optional: the offline validator
 
 `tools/validate_plugin.py` (see §9) checks a built `.so` before you upload it.
-It needs Python 3 and `pyelftools`:
+It needs Python 3 and `pyelftools`.
+
+If you build with ESP-IDF you already have both: the IDF Python environment
+ships `pyelftools`, so just run the validator from a shell where you've sourced
+`export.sh` — no install needed.
+
+Otherwise install it into a virtual environment. (Don't run a bare
+`pip install` — on many systems that resolves to an old Python 2, and Homebrew
+/ Debian Python 3 block direct installs under PEP 668.)
 
 ```sh
+python3 -m venv .venv && source .venv/bin/activate
 pip install pyelftools
 ```
 
@@ -128,7 +143,7 @@ pip install pyelftools
 ```
 q-tune-sdk/
 ├── README.md                       This guide
-├── LICENSE  /  NOTICE              Apache-2.0 (you may sell your plugins)
+├── LICENSE  /  NOTICE.md           Apache-2.0 (you may sell your plugins)
 ├── COMPATIBILITY.md                SDK ↔ ABI ↔ LVGL ↔ firmware version matrix
 ├── Dockerfile  /  docker-build.sh  Pinned ESP-IDF v5.3.2 build environment
 ├── .devcontainer/                  VS Code "Reopen in Container" config
