@@ -23,6 +23,8 @@ Your plugin will:
 
 If you don't have Docker yet, [follow the official installation guide](https://docs.docker.com/get-docker/). It takes 5 minutes. Once installed, you should be able to run `docker --version` in a terminal.
 
+**On Windows?** Everything here works on Windows with [Docker Desktop](https://docs.docker.com/get-docker/) — no WSL setup needed. The only difference is the build command: use `.\docker-build.ps1 <project>` (PowerShell) instead of `./docker-build.sh`, and `python` instead of `python3` for the scaffolding tool. If you're using Claude Code, it will pick the right commands for you.
+
 ## Step 2: Get the SDK
 
 Clone the Q-Tune SDK repository or download it as a ZIP. Open a terminal in the SDK folder:

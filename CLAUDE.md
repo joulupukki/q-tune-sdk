@@ -46,22 +46,29 @@ The UI library is **LVGL 9.2**.
    `examples/example_tuner` and `examples/example_standby`.
 3. **Build** (Docker, no local toolchain needed):
    ```sh
-   ./docker-build.sh path/to/your_project
+   ./docker-build.sh path/to/your_project          # macOS / Linux
    ```
-   Produces `path/to/your_project/build/<name>.so`.
-4. **Validate** — always, before declaring success:
+   ```powershell
+   .\docker-build.ps1 path\to\your_project          # Windows (PowerShell)
+   ```
+   Produces `path/to/your_project/build/<name>.so`. The build **runs the validator
+   automatically** at the end (inside the container, which ships `pyelftools`), so
+   a green build is already a validated `.so`. Read that output — if it reports an
+   unexported symbol or version problem, fix it and rebuild.
+4. **Validate** — the build does this for you, but you can also run it standalone
+   (e.g. to re-check a `.so` without rebuilding):
    ```sh
-   python3 tools/validate_plugin.py path/to/your_project/build/<name>.so
+   python3 tools/validate_plugin.py path/to/your_project/build/<name>.so   # macOS / Linux
+   python  tools/validate_plugin.py path/to/your_project/build/<name>.so   # Windows
    ```
-   The validator needs Python's `pyelftools`. It ships with ESP-IDF; if you only
-   have Docker and the command above reports it missing, run the validator inside
-   the build container (which already has it), e.g.:
+   The standalone validator needs Python's `pyelftools`. It ships with ESP-IDF; if
+   you only have Docker and the command above reports it missing, run it inside the
+   build container, e.g.:
    ```sh
    docker run --rm -v "$PWD":"$PWD" -w "$PWD" espressif/idf:v5.3.2 \
      python3 /path/to/q-tune-sdk/tools/validate_plugin.py path/to/your_project/build/<name>.so
    ```
-   Read the output. If it reports an unexported symbol or version problem, fix it
-   and rebuild. Do not hand the user a `.so` you haven't validated.
+   Do not hand the user a `.so` you haven't validated.
 5. **Tell the user how to install it** (you can't do this step — it's on hardware):
    upload at `http://<pedal-ip>/plugins`, then restart the pedal and pick the
    plugin under *Settings → Tuner UI* (or *Standby Screen*). See `docs/DEPLOY.md`.

@@ -1,0 +1,34 @@
+# Normalize line endings so a Windows checkout can't corrupt the build scripts.
+# Without this, git with core.autocrlf=true would rewrite docker-build.sh and the
+# Python tools to CRLF, which fails inside the Linux build container.
+
+# Default: treat as text, normalize to LF in the repo and on checkout.
+* text=auto eol=lf
+
+# Files that must stay LF (shell scripts, sources, build/config files).
+*.sh             text eol=lf
+*.py             text eol=lf
+*.cmake          text eol=lf
+*.c              text eol=lf
+*.cc             text eol=lf
+*.cxx            text eol=lf
+*.cpp            text eol=lf
+*.h              text eol=lf
+*.hpp            text eol=lf
+*.yml            text eol=lf
+*.yaml           text eol=lf
+*.md             text eol=lf
+CMakeLists.txt   text eol=lf
+*.defaults       text eol=lf
+Dockerfile       text eol=lf
+
+# PowerShell is happiest with CRLF on Windows.
+*.ps1            text eol=crlf
+
+# Binary assets — never touch their bytes.
+*.png  binary
+*.jpg  binary
+*.bin  binary
+*.so   binary
+*.elf  binary
+*.map  binary

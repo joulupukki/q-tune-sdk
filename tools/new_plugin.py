@@ -136,7 +136,10 @@ def main() -> int:
         "@DISPLAY_NAME@": args.name,
         "@PLUGIN_UID@": plugin_uid,
         "@SDK_BUILD_TAG@": f"{slug}-1.0",
-        "@QTUNE_SDK_DIR@": str(sdk_dir),
+        # Forward slashes so the baked fallback path is valid in CMake on every
+        # OS (Windows backslashes would be mis-parsed). Docker builds override
+        # QTUNE_SDK_DIR anyway; this only matters for non-Docker local builds.
+        "@QTUNE_SDK_DIR@": sdk_dir.as_posix(),
     }
 
     # Copy the template, substituting tokens in every file. Rename plugin.cpp.
@@ -160,12 +163,16 @@ def main() -> int:
     print(f"  prefix:   {prefix}_")
     print(f"  source:   {dest_root / 'main' / (slug + '.cpp')}")
     print(f"  sdk:      {sdk_dir}")
+    is_windows = os.name == "nt"
+    builder = sdk_dir / ("docker-build.ps1" if is_windows else "docker-build.sh")
+    py = "python" if is_windows else "python3"
     print()
     print("Next steps:")
     print(f"  1. Edit the UI:   {dest_root / 'main' / (slug + '.cpp')}")
-    print(f"  2. Build:         {sdk_dir / 'docker-build.sh'} {dest_root}")
-    print(f"  3. Validate:      python3 {sdk_dir / 'tools' / 'validate_plugin.py'} {dest_root / 'build' / (slug + '.so')}")
-    print(f"  4. Upload the .so to http://<pedal-ip>/plugins, restart, and select it.")
+    print(f"  2. Build:         {builder} {dest_root}")
+    print(f"     (the build validates the .so automatically; to validate manually:")
+    print(f"      {py} {sdk_dir / 'tools' / 'validate_plugin.py'} {dest_root / 'build' / (slug + '.so')})")
+    print(f"  3. Upload the .so to http://<pedal-ip>/plugins, restart, and select it.")
     return 0
 
 

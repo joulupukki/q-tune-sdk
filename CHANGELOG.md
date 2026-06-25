@@ -33,13 +33,20 @@ plugins as relocatable `.so` modules the firmware loads at boot.
   (177 host symbols) plus standard libc/libm.
 
 ### Tooling
-- `docker-build.sh` — one-command builds in the pinned ESP-IDF container, for
-  projects inside *or* outside the SDK repo.
+- `docker-build.sh` (macOS/Linux) and `docker-build.ps1` (Windows/PowerShell) —
+  one-command builds in the pinned ESP-IDF container, for projects inside *or*
+  outside the SDK repo. **Builds on Windows need only Docker Desktop** (no WSL):
+  the SDK and project mount at fixed container paths and `QTUNE_SDK_DIR` is
+  overridden for the build, so the build never depends on the host path layout.
+  Both scripts check that Docker is running and **run the validator automatically**
+  after a successful build, so no local Python/`pyelftools` is required.
 - `tools/new_plugin.py` — scaffold a uniquely-named plugin (unique prefix, stable
   auto-generated uid, build tag) from the `template/` skeletons; `--uid` overrides
   the generated identity.
 - `tools/validate_plugin.py` — offline pre-flight check (ABI, LVGL, symbols, and
-  a present/well-formed descriptor uid).
+  a present/well-formed descriptor uid), runnable standalone on any OS.
+- `.gitattributes` normalizes line endings (LF) so a Windows checkout can't
+  corrupt the build scripts.
 
 ### Docs & examples
 - `CLAUDE.md` for AI-assisted plugin authoring with Claude Code.

@@ -116,16 +116,32 @@ for you. Use the native install only if you already run ESP-IDF locally.
 
 ### Option A — Docker (recommended, zero local install)
 
-Requires only [Docker](https://docs.docker.com/get-docker/). The pinned
-`espressif/idf:v5.3.2` image carries the whole toolchain.
+Requires only [Docker](https://docs.docker.com/get-docker/) — works the same on
+**macOS, Linux, and Windows**. The pinned `espressif/idf:v5.3.2` image carries
+the whole toolchain, and the build validates the `.so` for you, so you need no
+local ESP-IDF, Python, or `pyelftools`.
+
+**macOS / Linux:**
 
 ```sh
-# Build any plugin project (writes build/<name>.so):
+# Build any plugin project (writes build/<name>.so, then validates it):
 ./docker-build.sh examples/example_tuner
 
 # …or from inside a project directory:
 cd examples/example_tuner && ../../docker-build.sh
 ```
+
+**Windows** (PowerShell, with Docker Desktop running):
+
+```powershell
+.\docker-build.ps1 examples\example_tuner
+```
+
+On Windows, Docker Desktop must have access to the drive your SDK and project
+live on — it does by default for your user profile; if you keep them elsewhere,
+add the folder under *Docker Desktop → Settings → Resources → File sharing*. No
+WSL setup is required (though building inside a WSL2 shell with the `.sh` script
+also works if you prefer it).
 
 For interactive development, open the repo in **VS Code → "Reopen in
 Container"** (the `.devcontainer/` config builds the same pinned image and puts
@@ -138,7 +154,7 @@ Container"** (the `.devcontainer/` config builds the same pinned image and puts
 | ESP-IDF          | v5.3.2 (exactly — the firmware is built with this) |
 | IDF target       | `esp32s3` |
 | Python           | 3.8 or newer |
-| Host OS          | macOS or Linux (Windows: use WSL2 or Docker) |
+| Host OS          | macOS, Linux, or Windows via WSL2 (native Windows ESP-IDF is unsupported here — use Option A instead) |
 
 Follow Espressif's
 [Get Started guide](https://docs.espressif.com/projects/esp-idf/en/v5.3.2/esp32s3/get-started/index.html),
@@ -182,8 +198,10 @@ pip install pyelftools
 q-tune-sdk/
 ├── README.md                       This guide
 ├── LICENSE  /  NOTICE.md           Apache-2.0 (you may sell your plugins)
+├── CONTRIBUTING.md  /  CODE_OF_CONDUCT.md
 ├── COMPATIBILITY.md                SDK ↔ ABI ↔ LVGL ↔ firmware version matrix
-├── Dockerfile  /  docker-build.sh  Pinned ESP-IDF v5.3.2 build environment
+├── Dockerfile                      Pinned ESP-IDF v5.3.2 build environment
+├── docker-build.sh / docker-build.ps1  One-step build+validate (macOS·Linux / Windows)
 ├── .devcontainer/                  VS Code "Reopen in Container" config
 │
 ├── include/                        SDK headers — add this dir to your include path
@@ -199,7 +217,8 @@ q-tune-sdk/
 │   └── qtune_plugin.cmake          qtune_project_so() — the C++ .so builder
 │
 ├── docs/
-│   └── ALLOWED_SYMBOLS.md          Generated list of exported host symbols (§7)
+│   ├── ALLOWED_SYMBOLS.md          Generated list of exported host symbols (§7)
+│   └── FAQ.md                      Common questions (licensing, API boundaries, Windows)
 │
 ├── tools/
 │   └── validate_plugin.py          Offline .so checker (§9)

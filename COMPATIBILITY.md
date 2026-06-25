@@ -16,7 +16,10 @@ contracts the loader enforces at boot:
   `major.minor` (patch drift is allowed). Pin `lvgl/lvgl` accordingly in your
   `idf_component.yml`.
 
-Build your plugin with the row that matches the firmware on your device.
+Build your plugin with the row that matches the firmware on your device. Any
+build host works — **macOS, Linux, or Windows** — using the bundled Docker
+environment (`docker-build.sh` / `docker-build.ps1`), which pins ESP-IDF and LVGL
+regardless of OS.
 
 | SDK release | ABI version | LVGL (pin) | ESP-IDF | Firmware |
 |-------------|-------------|------------|---------|----------|
