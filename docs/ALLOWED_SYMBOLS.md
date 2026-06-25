@@ -5,7 +5,7 @@
 
 These are the **only** host symbols a Q-Tune plugin may reference. They are resolved by the firmware's ELF loader at load time; calling any other `lv_*` (or firmware) function leaves an unresolved relocation and the plugin will fail to load.
 
-Total exported symbols: **174**.
+Total exported symbols: **217**.
 
 In addition to the symbols below, standard C library functions (`printf`, `snprintf`, `memcpy`, `memset`, `malloc`, `free`, `strncpy`, …) and `<math.h>` functions (`fabsf`, `log2f`, `powf`, `roundf`, …) are available.
 
@@ -61,7 +61,7 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 ### Object — style setters
 
-`lv_obj_set_style_arc_color`, `lv_obj_set_style_arc_opa`, `lv_obj_set_style_arc_width`, `lv_obj_set_style_bg_color`, `lv_obj_set_style_bg_grad_color`, `lv_obj_set_style_bg_grad_dir`, `lv_obj_set_style_bg_opa`, `lv_obj_set_style_border_color`, `lv_obj_set_style_border_opa`, `lv_obj_set_style_border_width`, `lv_obj_set_style_clip_corner`, `lv_obj_set_style_image_recolor`, `lv_obj_set_style_image_recolor_opa`, `lv_obj_set_style_length`, `lv_obj_set_style_line_color`, `lv_obj_set_style_line_opa`, `lv_obj_set_style_line_rounded`, `lv_obj_set_style_line_width`, `lv_obj_set_style_opa`, `lv_obj_set_style_pad_all`, `lv_obj_set_style_pad_bottom`, `lv_obj_set_style_pad_left`, `lv_obj_set_style_pad_right`, `lv_obj_set_style_pad_row`, `lv_obj_set_style_pad_top`, `lv_obj_set_style_radius`, `lv_obj_set_style_shadow_color`, `lv_obj_set_style_shadow_width`, `lv_obj_set_style_text_align`, `lv_obj_set_style_text_color`, `lv_obj_set_style_text_font`, `lv_obj_set_style_transform_angle`, `lv_obj_set_style_transform_pivot_x`, `lv_obj_set_style_transform_pivot_y`
+`lv_obj_set_style_arc_color`, `lv_obj_set_style_arc_opa`, `lv_obj_set_style_arc_width`, `lv_obj_set_style_bg_color`, `lv_obj_set_style_bg_grad_color`, `lv_obj_set_style_bg_grad_dir`, `lv_obj_set_style_bg_opa`, `lv_obj_set_style_border_color`, `lv_obj_set_style_border_opa`, `lv_obj_set_style_border_width`, `lv_obj_set_style_clip_corner`, `lv_obj_set_style_image_recolor`, `lv_obj_set_style_image_recolor_opa`, `lv_obj_set_style_length`, `lv_obj_set_style_line_color`, `lv_obj_set_style_line_opa`, `lv_obj_set_style_line_rounded`, `lv_obj_set_style_line_width`, `lv_obj_set_style_opa`, `lv_obj_set_style_pad_all`, `lv_obj_set_style_pad_bottom`, `lv_obj_set_style_pad_left`, `lv_obj_set_style_pad_right`, `lv_obj_set_style_pad_row`, `lv_obj_set_style_pad_top`, `lv_obj_set_style_radius`, `lv_obj_set_style_shadow_color`, `lv_obj_set_style_shadow_width`, `lv_obj_set_style_text_align`, `lv_obj_set_style_text_color`, `lv_obj_set_style_text_font`, `lv_obj_set_style_transform_rotation`, `lv_obj_set_style_transform_angle`, `lv_obj_set_style_transform_pivot_x`, `lv_obj_set_style_transform_pivot_y`
 
 ### Palette
 
@@ -81,7 +81,7 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 ### Style
 
-`lv_style_init`, `lv_style_reset`, `lv_style_set_arc_color`, `lv_style_set_arc_width`, `lv_style_set_bg_color`, `lv_style_set_line_color`, `lv_style_set_line_width`, `lv_style_set_pad_all`, `lv_style_set_text_align`, `lv_style_set_text_color`, `lv_style_set_text_font`, `lv_style_set_transform_angle`, `lv_style_set_transform_pivot_x`, `lv_style_set_transform_pivot_y`, `lv_style_set_width`
+`lv_style_init`, `lv_style_reset`, `lv_style_set_arc_color`, `lv_style_set_arc_width`, `lv_style_set_bg_color`, `lv_style_set_line_color`, `lv_style_set_line_width`, `lv_style_set_pad_all`, `lv_style_set_text_align`, `lv_style_set_text_color`, `lv_style_set_text_font`, `lv_style_set_transform_rotation`, `lv_style_set_transform_angle`, `lv_style_set_transform_pivot_x`, `lv_style_set_transform_pivot_y`, `lv_style_set_width`
 
 ### Timer
 
@@ -99,7 +99,11 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 ### Note-name glyph image accessors
 
-`qt_get_note_glyph`, `qt_get_sharp_glyph`, `qt_get_blank_glyph`, `qt_note_is_sharp`
+`qt_get_note_glyph`, `qt_get_sharp_glyph`, `qt_get_blank_glyph`, `qt_note_is_sharp`, `qt_get_mute_glyph`
+
+### Misc utilities
+
+`qt_uptime_ms`, `qt_random_u32`
 
 ## LVGL fonts
 
@@ -108,6 +112,10 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 ## libc / libm subset
 
 `snprintf`, `vsnprintf`, `strncpy`, `strncmp`, `fabsf`, `roundf`, `floorf`, `ceilf`, `powf`, `log2f`, `logf`, `expf`, `sqrtf`, `fmodf`, `sinf`, `cosf`, `atan2f`
+
+## libgcc soft-float / runtime helpers
+
+`__addsf3`, `__subsf3`, `__mulsf3`, `__divsf3`, `__negsf2`, `__adddf3`, `__subdf3`, `__muldf3`, `__divdf3`, `__negdf2`, `__extendsfdf2`, `__truncdfsf2`, `__floatsisf`, `__floatunsisf`, `__floatsidf`, `__floatunsidf`, `__floatdisf`, `__floatdidf`, `__fixsfsi`, `__fixunssfsi`, `__fixdfsi`, `__fixunsdfsi`, `__fixsfdi`, `__fixdfdi`, `__eqsf2`, `__nesf2`, `__ltsf2`, `__lesf2`, `__gtsf2`, `__gesf2`, `__unordsf2`, `__eqdf2`, `__nedf2`, `__ltdf2`, `__ledf2`, `__gtdf2`, `__gedf2`, `__unorddf2`
 
 ---
 

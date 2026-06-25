@@ -13,12 +13,10 @@
 #   cd examples/example_standby && ../../docker-build.sh
 #
 # A plugin project references the SDK's include/ and cmake/ via the QTUNE_SDK_DIR
-# line in its CMakeLists.txt (default: two levels up). For that path to resolve
-# inside the container, the SDK root must be mounted — so when the project lives
-# inside this SDK repo (e.g. the examples, or your own copy of one), this script
-# mounts the whole SDK repo and builds in the project subdir. The simplest way to
-# build your own plugin with Docker is therefore to keep it inside a checkout of
-# this repo (copy an example and edit it).
+# line in its CMakeLists.txt. For that path to resolve inside the container, the
+# SDK root is mounted at the SAME absolute path it has on the host — so whether
+# your project lives inside this SDK repo (the examples) or anywhere else on disk
+# (a project created by tools/new_plugin.py), the build "just works" with Docker.
 #
 # The resulting <name>.so is written to <plugin-project-dir>/build/.
 
@@ -34,21 +32,17 @@ if [ ! -f "${PROJECT_DIR}/CMakeLists.txt" ]; then
 fi
 PROJECT_DIR="$(cd "${PROJECT_DIR}" && pwd)"
 
-# If the project lives inside the SDK repo, mount the whole repo so the project's
-# QTUNE_SDK_DIR (../..) resolves to the mounted SDK root. Otherwise mount just the
-# project (the project must then set an absolute QTUNE_SDK_DIR that is also
-# reachable, or build natively).
-if [[ "${PROJECT_DIR}/" == "${SDK_ROOT}/"* ]]; then
-  rel="${PROJECT_DIR#"${SDK_ROOT}/"}"
-  MOUNT="${SDK_ROOT}"
-  WORKDIR="/work/${rel}"
-else
-  MOUNT="${PROJECT_DIR}"
-  WORKDIR="/work"
+# Mount the SDK at its own host path so an absolute QTUNE_SDK_DIR resolves inside
+# the container. The build runs in the project directory (also at its host path).
+# When the project lives inside the SDK repo, the SDK mount already contains it,
+# so we avoid a redundant (and illegal) overlapping second mount.
+MOUNTS=(-v "${SDK_ROOT}:${SDK_ROOT}")
+if [[ "${PROJECT_DIR}/" != "${SDK_ROOT}/"* ]]; then
+  MOUNTS+=(-v "${PROJECT_DIR}:${PROJECT_DIR}")
 fi
 
 echo "Building plugin in: ${PROJECT_DIR}"
-echo "Mounting:           ${MOUNT} -> /work"
+echo "Mounting SDK:       ${SDK_ROOT}"
 echo "Using image:        ${IMAGE}"
 
 # The base image's entrypoint sources $IDF_PATH/export.sh before exec'ing the
@@ -60,8 +54,8 @@ echo "Using image:        ${IMAGE}"
 # subsequent builds makes them incremental — editing one plugin source then
 # recompiles just that file and relinks the .so.
 exec docker run --rm -t \
-  -v "${MOUNT}":/work \
-  -w "${WORKDIR}" \
+  "${MOUNTS[@]}" \
+  -w "${PROJECT_DIR}" \
   -e IDF_TARGET=esp32s3 \
   "${IMAGE}" \
   sh -c 'grep -q "CONFIG_IDF_TARGET=\"esp32s3\"" sdkconfig 2>/dev/null || idf.py set-target esp32s3; idf.py build'

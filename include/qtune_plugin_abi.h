@@ -72,7 +72,19 @@ typedef struct {
     QTunePluginType type;
     const char     *sdk_build;    // freeform SDK/build tag, for logging only
     const void     *interface;    // -> TunerGUIInterface* or TunerStandbyGUIInterface*
+    const char     *uid;          // STABLE plugin identity (see below). Required.
 } QTunePluginDescriptor;
+
+// `uid` is the plugin's permanent identity — the firmware persists the user's UI
+// selection and tracks crashes by this string, NOT by a number. It must be:
+//   * STABLE: never change it once a plugin is published (changing it loses the
+//     user's saved selection of that UI).
+//   * UNIQUE: namespaced so two unrelated plugins never collide WITHOUT any central
+//     registry. The SDK scaffolding tool generates one automatically, e.g.
+//     "qtune.my-tuner.k7f2q9". It must NOT be a bare integer — that space is
+//     reserved for built-in UIs, whose uid is simply their fixed number as a string.
+// The firmware assigns each plugin a numeric slot DYNAMICALLY at load time (within
+// the reserved ranges below); plugins no longer choose a number themselves.
 
 // Well-known data symbol holding the descriptor. The offline SDK validator
 // reads this statically from the .so to check the version fields. NOTE: the

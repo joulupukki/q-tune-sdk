@@ -11,6 +11,11 @@ A small white dot bounces around the screen at a constant speed. When the
 device is in Buffered Bypass mode and the user plays a note, the dot turns
 the user's configured accent colour. When the note stops, it returns to white.
 
+**Tap the screen** and the dot jumps to your finger and sets off in a new random
+direction — a small demonstration of touchscreen input (`lv_obj_add_event_cb` +
+`lv_indev_get_point`) and the `qt_random_u32()` host accessor. See
+[`docs/TOUCH.md`](../../docs/TOUCH.md) for the full touch pattern.
+
 ## Prerequisites
 
 See the [SDK README §2](../../README.md#2-prerequisites) for the full toolchain
@@ -48,10 +53,12 @@ cmake --build build --target validate
 4. Restart the device.
 5. Select "Dot" from Settings > Standby Screen.
 
-## Plugin ID
+## Plugin identity
 
-`get_id()` returns **210** — in the reserved standby plugin range [210, 254].
-Change it only if there is a collision with another installed plugin.
+The descriptor's `uid` is `"qtune.example-standby.0001"` — the plugin's stable
+identity. The firmware assigns the numeric menu slot dynamically at load; you don't
+pick a number. The scaffolding tool (`tools/new_plugin.py`) generates a unique `uid`
+for your own plugin. Never change a `uid` after publishing.
 
 ## Important: timer lifecycle
 

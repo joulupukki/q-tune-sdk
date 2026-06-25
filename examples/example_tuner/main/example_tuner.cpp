@@ -54,7 +54,6 @@
 // ---------------------------------------------------------------------------
 // Forward declarations
 // ---------------------------------------------------------------------------
-static uint8_t      et_get_id(void);
 static const char  *et_get_name(void);
 static TuningUIType et_get_type(void);
 static void         et_init(lv_obj_t *screen);
@@ -71,7 +70,6 @@ static void         et_cleanup(void);
 // Interface struct
 // ---------------------------------------------------------------------------
 static TunerGUIInterface et_interface = {
-    .get_id                = et_get_id,
     .get_name              = et_get_name,
     .get_type              = et_get_type,
     .init                  = et_init,
@@ -92,6 +90,9 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .type         = QTUNE_PLUGIN_TUNER,
     .sdk_build    = "example-sdk-1.0",
     .interface    = &et_interface,
+    // Stable identity. The firmware assigns the numeric slot dynamically at load;
+    // the uid is what persists the user's selection — never change it once shipped.
+    .uid          = "qtune.example-tuner.0001",
 };
 
 // Entry function the firmware calls at load time. Required: the ELF loader's
@@ -152,11 +153,6 @@ static lv_coord_t et_scale_size(void) {
     lv_coord_t base = (screen_width < screen_height) ? screen_width : screen_height;
     int pct = is_landscape ? SCALE_SIZE_PCT_LANDSCAPE : SCALE_SIZE_PCT_PORTRAIT;
     return (lv_coord_t)((base * pct) / 100);
-}
-
-static uint8_t et_get_id(void) {
-    // In the reserved tuner plugin range [100, 199]. Pick any unused value.
-    return 100;
 }
 
 static const char *et_get_name(void) {

@@ -75,6 +75,22 @@ const lv_image_dsc_t *qt_get_blank_glyph(qt_glyph_size_t size);
 // Non-zero when `note` is a sharp (A#, C#, D#, F#, G#).
 uint8_t qt_note_is_sharp(TunerNoteName note);
 
+// The built-in "mute" indicator icon (shown when the tuner interface passes
+// show_mute_indicator). A single fixed-size image, like the one the stock
+// tuner UIs draw. Returns a stable pointer; never NULL.
+const lv_image_dsc_t *qt_get_mute_glyph(void);
+
+// --- Misc utilities ---------------------------------------------------------
+// Milliseconds since the device booted. Monotonic, never goes backwards, and
+// wraps after ~49.7 days. Use it for animation timing and elapsed-time logic
+// (e.g. "how long has this note been held?"). Prefer this over lv_timer for
+// frame-delta math; pair it with an lv_timer that fires your update callback.
+uint32_t qt_uptime_ms(void);
+
+// A 32-bit hardware random number. Good for particle effects, quiz prompts,
+// jitter, and any "pick something at random" behaviour. Not for cryptography.
+uint32_t qt_random_u32(void);
+
 #ifdef __cplusplus
 }
 #endif

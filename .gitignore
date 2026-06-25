@@ -8,3 +8,8 @@
 # Editor / language-server caches
 **/.cache/
 .vscode/
+
+# OS / tooling junk
+.DS_Store
+**/__pycache__/
+*.pyc

@@ -12,12 +12,15 @@ upload — so you fail fast instead of discovering a problem at boot:
   * its ABI major matches this SDK and its ABI minor is <= this SDK's,
   * its LVGL major.minor matches this SDK,
   * its descriptor type is TUNER or STANDBY,
+  * its descriptor carries a stable `uid` string — present, non-empty, and not a
+    bare integer (bare integers are reserved for built-in UIs),
   * every undefined `lv_*` symbol it references is in the exported allowlist
     (docs/ALLOWED_SYMBOLS.md) — this catches "called an LVGL function the
     firmware does not export".
 
-Note: the plugin's numeric ID comes from get_id() (a function), so it cannot be
-read statically; the firmware enforces the reserved ID range at load time.
+Note: a plugin no longer chooses a numeric ID — the firmware assigns one
+dynamically at load time. The plugin's permanent identity is the descriptor's
+`uid` string, which this validator reads statically from the .so (below).
 
 Usage:
     python3 tools/validate_plugin.py build/my_plugin.so
@@ -37,8 +40,13 @@ try:
     from elftools.elf.sections import SymbolTableSection
 except ImportError:
     sys.stderr.write(
-        "error: pyelftools is required. Install it with:\n"
-        "    pip install pyelftools\n")
+        "error: pyelftools is required.\n"
+        "  - It already ships with ESP-IDF: run this from a shell where you've\n"
+        "    sourced esp-idf/export.sh, and no install is needed.\n"
+        "  - Otherwise install it for python3 (not 'pip', which may be Python 2):\n"
+        "        python3 -m pip install --user pyelftools\n"
+        "    or in a venv:  python3 -m venv .venv && . .venv/bin/activate && pip install pyelftools\n"
+        "  - Or just run the validator inside the build container (it has pyelftools).\n")
     sys.exit(2)
 
 SDK_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -112,28 +120,77 @@ def find_symbol(elf, name):
     return None
 
 
-def read_descriptor(elf, sym):
-    """Read abi_version, lvgl_version, type from the descriptor's section data.
+def _read_vaddr(elf, vaddr, nbytes):
+    """Read `nbytes` from the loadable section containing virtual address `vaddr`.
 
     st_shndx is unreliable after --strip-all (section indices shift), so locate
-    the containing section by virtual-address range using st_value — the same
-    address the dynamic loader resolves.
+    the containing section by virtual-address range — the same address the
+    dynamic loader resolves. Returns the bytes, or None if unmapped/out of range.
+    """
+    for section in elf.iter_sections():
+        addr, size = section["sh_addr"], section["sh_size"]
+        if not addr or section["sh_type"] == "SHT_NOBITS":
+            continue
+        if addr <= vaddr < addr + size:
+            off = vaddr - addr
+            data = section.data()[off:off + nbytes]
+            return data if len(data) == nbytes else None
+    return None
+
+
+def _read_cstring(elf, vaddr, maxlen=256):
+    """Resolve a pointer vaddr to its NUL-terminated string in the .so."""
+    for section in elf.iter_sections():
+        addr, size = section["sh_addr"], section["sh_size"]
+        if not addr or section["sh_type"] == "SHT_NOBITS":
+            continue
+        if addr <= vaddr < addr + size:
+            blob = section.data()[vaddr - addr:vaddr - addr + maxlen]
+            nul = blob.find(b"\x00")
+            if nul >= 0:
+                blob = blob[:nul]
+            try:
+                return blob.decode("utf-8", "replace")
+            except Exception:  # noqa: BLE001
+                return None
+    return None
+
+
+def read_descriptor(elf, sym):
+    """Read the descriptor fields from its section data.
+
+    Layout: abi_version(u32), lvgl_version(u32), type(u32), sdk_build(ptr),
+    interface(ptr), uid(ptr). The three u32s sit at offsets 0/4/8; the uid
+    pointer is the last field. Returns (abi, lvgl, type, uid_str) where uid_str
+    is the resolved string, "" if the uid pointer is NULL, or None if the uid
+    pointer could not be resolved to a string.
     """
     if sym["st_shndx"] == "SHN_UNDEF":
         return None
     value = sym["st_value"]
     endian = "<" if elf.little_endian else ">"
-    for section in elf.iter_sections():
-        addr, size = section["sh_addr"], section["sh_size"]
-        if not addr or section["sh_type"] == "SHT_NOBITS":
-            continue
-        if addr <= value < addr + size:
-            data = section.data()[value - addr:value - addr + 12]
-            if len(data) < 12:
-                return None
-            abi, lvgl, typ = struct.unpack(endian + "III", data)
-            return abi, lvgl, typ
-    return None
+    ptr_size = 8 if elf.elfclass == 64 else 4
+    pfmt = "Q" if ptr_size == 8 else "I"
+
+    head = _read_vaddr(elf, value, 12)
+    if head is None:
+        return None
+    abi, lvgl, typ = struct.unpack(endian + "III", head)
+
+    # uid is the final pointer: after 3 u32s + sdk_build ptr + interface ptr,
+    # honouring pointer alignment (the first pointer follows the 12-byte u32 head,
+    # padded up to ptr_size).
+    first_ptr_off = (12 + ptr_size - 1) & ~(ptr_size - 1)
+    uid_ptr_off = first_ptr_off + 2 * ptr_size  # skip sdk_build, interface
+    raw = _read_vaddr(elf, value + uid_ptr_off, ptr_size)
+    uid_str = None
+    if raw is not None:
+        (uid_vaddr,) = struct.unpack(endian + pfmt, raw)
+        if uid_vaddr == 0:
+            uid_str = ""        # NULL pointer
+        else:
+            uid_str = _read_cstring(elf, uid_vaddr)
+    return abi, lvgl, typ, uid_str
 
 
 def undefined_dynsyms(elf):
@@ -204,7 +261,7 @@ def main() -> int:
                 warnings.append("could not read descriptor bytes statically; "
                                 "version/type checks skipped.")
             else:
-                abi, lvgl, typ = desc
+                abi, lvgl, typ, uid = desc
                 expected_abi = read_expected_abi()
                 p_major, p_minor = abi >> 16, abi & 0xFFFF
                 e_major, e_minor = expected_abi >> 16, expected_abi & 0xFFFF
@@ -228,6 +285,25 @@ def main() -> int:
                     print(f"  abi_version:  {p_major}.{p_minor}")
                     print(f"  lvgl_version: {plv[0]}.{plv[1]}.{plv[2]}")
 
+                # uid: the plugin's stable identity. Must be present, non-empty,
+                # and not a bare integer (that space is reserved for built-ins).
+                if uid is None:
+                    warnings.append(
+                        "could not resolve the descriptor 'uid' string "
+                        "statically; uid content check skipped.")
+                elif uid == "":
+                    errors.append(
+                        "descriptor 'uid' pointer is NULL. Every plugin must set "
+                        "a stable uid (the scaffold auto-generates one, e.g. "
+                        "\"qtune.my-tuner.k7f2q9\").")
+                elif re.fullmatch(r"\d+", uid):
+                    errors.append(
+                        f"descriptor 'uid' is \"{uid}\", a bare integer — that "
+                        "space is reserved for built-in UIs. Use a namespaced "
+                        "uid like \"qtune.my-tuner.k7f2q9\".")
+                else:
+                    print(f"  uid:          {uid}")
+
         # Undefined-symbol check: a symbol resolves iff it is in the firmware's
         # curated table (ALLOWED_SYMBOLS.md) or elf_loader's built-in table.
         resolvable = read_allowlist() | ELF_LOADER_BUILTINS
@@ -235,8 +311,17 @@ def main() -> int:
             if name == DESCRIPTOR_SYMBOL or name in resolvable:
                 continue
             if name.startswith("__"):
-                continue  # compiler runtime (libgcc) — resolved by the loader
-            if name.startswith("lv_"):
+                # libgcc/compiler-runtime helper (e.g. __divsf3 float division,
+                # __extendsfdf2 float->double). The elf_loader does NOT provide
+                # these; the firmware must export them. Only the ones in the
+                # allowlist resolve — flag the rest (they fail to relocate on the
+                # device with "Can't find symbol <name>").
+                errors.append(
+                    f"references compiler-runtime symbol '{name}' (libgcc soft-"
+                    "float/conversion helper) that the firmware does not export. "
+                    "The plugin will fail to load — request it be added to the "
+                    "firmware's qtune_plugin_symbols.txt.")
+            elif name.startswith("lv_"):
                 errors.append(
                     f"references unexported LVGL symbol '{name}' — not in "
                     "docs/ALLOWED_SYMBOLS.md. The plugin will fail to load.")

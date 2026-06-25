@@ -13,6 +13,10 @@
  * tints the dot to the user's accent colour; when no pitch is detected the dot
  * reverts to white.
  *
+ * Touch: tap anywhere and the dot jumps to your finger and heads off in a new
+ * random direction (es_on_touch). This demonstrates the touchscreen input path —
+ * lv_obj_add_event_cb + lv_event_get_indev + lv_indev_get_point — and qt_random_u32().
+ *
  * Orientation: works in BOTH portrait (240x320) and landscape (320x240). The
  * bounce walls are recomputed every tick from the live screen_width/screen_height
  * host globals (see es_timer_cb), so the animation fills whatever the current
@@ -35,7 +39,6 @@
 // ---------------------------------------------------------------------------
 // Forward declarations
 // ---------------------------------------------------------------------------
-static uint8_t      es_get_id(void);
 static const char  *es_get_name(void);
 static bool         es_enable_screen(void);
 static void         es_init(lv_obj_t *screen);
@@ -50,7 +53,6 @@ static void         es_display_frequency(float frequency,
 // Interface struct
 // ---------------------------------------------------------------------------
 static TunerStandbyGUIInterface es_interface = {
-    .get_id           = es_get_id,
     .get_name         = es_get_name,
     .enable_screen    = es_enable_screen,
     .init             = es_init,
@@ -69,6 +71,9 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .type         = QTUNE_PLUGIN_STANDBY,
     .sdk_build    = "example-sdk-1.0",
     .interface    = &es_interface,
+    // Stable identity. The firmware assigns the numeric slot dynamically at load;
+    // the uid is what persists the user's selection — never change it once shipped.
+    .uid          = "qtune.example-standby.0001",
 };
 
 // Entry function the firmware calls at load time. Required: the ELF loader's
@@ -134,14 +139,35 @@ static void es_timer_cb(lv_timer_t *timer) {
 }
 
 // ---------------------------------------------------------------------------
+// Touch callback — the pedal has a capacitive touchscreen. We register this on
+// the screen in es_init(); on a press we move the dot under the finger and pick
+// a new random travel direction. lv_event_get_indev()/lv_indev_get_point() read
+// the touch coordinates; both are in the host export table.
+// ---------------------------------------------------------------------------
+static void es_on_touch(lv_event_t *e) {
+    lv_indev_t *indev = lv_event_get_indev(e);
+    if (!indev || !s_dot) { return; }
+
+    lv_point_t p;
+    lv_indev_get_point(indev, &p);
+
+    // Keep the dot fully on-screen at the tap point.
+    int right  = (int)screen_width  - DOT_SIZE;
+    int bottom = (int)screen_height - DOT_SIZE;
+    s_x = (int)p.x; if (s_x < 0) s_x = 0; if (s_x > right)  s_x = right;
+    s_y = (int)p.y; if (s_y < 0) s_y = 0; if (s_y > bottom) s_y = bottom;
+
+    // New random direction (qt_random_u32 is a host accessor). Pick a non-zero
+    // sign for each axis so the dot always sets off somewhere.
+    s_dx = (qt_random_u32() & 1) ? DOT_SPEED_X : -DOT_SPEED_X;
+    s_dy = (qt_random_u32() & 1) ? DOT_SPEED_Y : -DOT_SPEED_Y;
+
+    lv_obj_set_pos(s_dot, (lv_coord_t)s_x, (lv_coord_t)s_y);
+}
+
+// ---------------------------------------------------------------------------
 // Interface implementations
 // ---------------------------------------------------------------------------
-
-static uint8_t es_get_id(void) {
-    // Must be in [QTUNE_PLUGIN_STANDBY_ID_MIN, QTUNE_PLUGIN_STANDBY_ID_MAX]
-    // i.e. [210, 254].
-    return 210;
-}
 
 static const char *es_get_name(void) {
     return "Dot";
@@ -176,6 +202,10 @@ static void es_init(lv_obj_t *screen) {
     // The firmware holds the LVGL lock during init/cleanup/display_frequency —
     // do NOT call lvgl_port_lock()/unlock() anywhere in this plugin.
     s_timer = lv_timer_create(es_timer_cb, TIMER_MS, NULL);
+
+    // React to screen touches: tap to send the dot to your finger. The screen
+    // object dispatches touch events to this callback.
+    lv_obj_add_event_cb(screen, es_on_touch, LV_EVENT_PRESSED, NULL);
 }
 
 static void es_cleanup(void) {

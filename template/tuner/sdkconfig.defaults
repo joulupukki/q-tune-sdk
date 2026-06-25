@@ -1,0 +1,27 @@
+# sdkconfig.defaults — @DISPLAY_NAME@ tuner plugin
+#
+# These mirror the firmware's LVGL configuration so the compiled .so shares the
+# same struct layouts as the firmware. DO NOT change CONFIG_LV_COLOR_DEPTH.
+
+# --- Color depth: 16-bit RGB565 — MANDATORY, must match firmware ----------
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_COLOR_DEPTH=16
+
+# --- OS integration: FreeRTOS ---------------------------------------------
+CONFIG_LV_OS_FREERTOS=y
+CONFIG_LV_USE_OS=2
+
+# --- Memory management ----------------------------------------------------
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_BUILTIN_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+
+# --- Widgets / fonts: enable what your plugin uses ------------------------
+# The starter code uses a label and the built-in note glyphs. Add more here as
+# you use more widgets (e.g. CONFIG_LV_USE_SCALE=y for a needle gauge) or fonts.
+CONFIG_LV_USE_LABEL=y
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_MONTSERRAT_28=y
+
+# --- Shared object support (required) -------------------------------------
+CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=y

@@ -66,11 +66,13 @@ idf.py build
    `/data/plugins/` at boot.
 5. Select "Example" from Settings > Tuner UI on the device.
 
-## Plugin ID
+## Plugin identity
 
-`get_id()` returns **100**. This places the plugin in the reserved tuner
-plugin range [100, 199]. Change this value only if it collides with another
-plugin you have installed — IDs must be unique across all loaded plugins.
+The descriptor's `uid` is `"qtune.example-tuner.0001"` — the plugin's stable
+identity. The firmware assigns the numeric menu slot dynamically at load; you don't
+pick a number. Your own plugin gets a unique `uid` automatically from the
+scaffolding tool (`tools/new_plugin.py`). Never change a `uid` after publishing or
+the user's saved selection of that UI is lost.
 
 ## Customising
 

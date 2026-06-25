@@ -10,6 +10,43 @@ develop and **sell** plugins built with this SDK.
 
 ---
 
+## Start here
+
+There are two ways to use this SDK. Pick the one that fits you:
+
+### Path A — with Claude Code (recommended, little or no coding)
+
+You describe the tuner or standby screen you want in plain English, and
+[Claude Code](https://claude.com/claude-code) writes, builds, and validates the
+plugin for you using this SDK. You only need [Docker](https://docs.docker.com/get-docker/)
+installed. This repo ships a [`CLAUDE.md`](CLAUDE.md) that teaches the assistant
+all the rules.
+
+→ **Follow [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).**
+
+### Path B — by hand (for developers)
+
+Scaffold a uniquely-named project, edit the C++, build, and validate yourself:
+
+```sh
+python3 tools/new_plugin.py --name "My Tuner" --type tuner
+./docker-build.sh my_tuner
+python3 tools/validate_plugin.py my_tuner/build/my_tuner.so
+```
+
+Then read the reference below for the descriptor contract, lifecycle, and the
+full allowed API. The complete worked examples are in [`examples/`](examples/);
+minimal starting points are in [`template/`](template/).
+
+**Helpful docs:** [Getting Started](docs/GETTING_STARTED.md) ·
+[Deploying to the pedal](docs/DEPLOY.md) · [Touch input](docs/TOUCH.md) ·
+[Troubleshooting](docs/TROUBLESHOOTING.md) · [Allowed symbols](docs/ALLOWED_SYMBOLS.md)
+
+> **Safety:** plugins are native code that runs unsandboxed on your pedal — see
+> [Security](#12-security) before installing a plugin you didn't build.
+
+---
+
 ## Table of Contents
 
 1. [Plugin model overview](#1-plugin-model-overview)
@@ -17,12 +54,13 @@ develop and **sell** plugins built with this SDK.
 3. [SDK directory layout](#3-sdk-directory-layout)
 4. [The descriptor contract](#4-the-descriptor-contract)
 5. [ABI and LVGL version rules](#5-abi-and-lvgl-version-rules)
-6. [Reserved ID ranges](#6-reserved-id-ranges)
+6. [Plugin identity (the `uid`) and the numeric-ID pool](#6-plugin-identity-the-uid-and-the-numeric-id-pool)
 7. [Allowed API surface](#7-allowed-api-surface)
 8. [Plugin lifecycle](#8-plugin-lifecycle)
 9. [Build → upload → activate](#9-build--upload--activate)
 10. [Crash recovery and safe mode](#10-crash-recovery-and-safe-mode)
 11. [Quick-start checklist](#11-quick-start-checklist)
+12. [Security](#12-security)
 
 ---
 
@@ -150,7 +188,7 @@ q-tune-sdk/
 │
 ├── include/                        SDK headers — add this dir to your include path
 │   ├── qtune_plugin.h              Umbrella header (include only this)
-│   ├── qtune_plugin_abi.h          QTunePluginDescriptor, QTUNE_PLUGIN_EXPORT, ID ranges
+│   ├── qtune_plugin_abi.h          QTunePluginDescriptor (incl. uid), QTUNE_PLUGIN_EXPORT
 │   ├── qtune_plugin_host_api.h     screen_width/height, qt_get_*() accessors
 │   ├── tuner_ui_interface.h        TunerGUIInterface struct
 │   ├── tuner_standby_ui_interface.h TunerStandbyGUIInterface struct
@@ -219,6 +257,8 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .sdk_build    = "my-plugin-1.0",             // freeform; logged only
     .interface    = &my_interface,               // -> TunerGUIInterface or
                                                  //    TunerStandbyGUIInterface
+    .uid          = "qtune.my-tuner.k7f2q9",     // STABLE identity (scaffold
+                                                 //   auto-generates; never change)
 };
 
 // Required entry point — the loader resolves this function, not the data above.
@@ -227,6 +267,12 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 }
 }
 ```
+
+`uid` is the plugin's **permanent identity** — the firmware persists the user's UI
+selection (and tracks crashes) by this string, not by a number. It is namespaced
+and never a bare integer, the scaffold auto-generates one, and you must never
+change it once published (see §6). The interface itself no longer has a `get_id()`
+— the firmware assigns each plugin a numeric slot dynamically at load time.
 
 The loader checks:
 
@@ -274,23 +320,34 @@ layouts diverge and the plugin will corrupt memory or crash immediately.
 
 ---
 
-## 6. Reserved ID ranges
+## 6. Plugin identity (the `uid`) and the numeric-ID pool
 
-Plugin IDs must not collide with built-in firmware IDs or other plugins. The
-firmware tries each registered ID in sorted order; duplicate IDs are silently
-skipped (the later-loaded plugin wins for that ID slot).
+**You do not pick a number.** Each plugin carries a stable string `uid` in its
+descriptor (e.g. `qtune.my-tuner.k7f2q9`) — that is its identity. The scaffolding
+tool (`tools/new_plugin.py`) auto-generates one for you; advanced users can
+override it with `--uid`.
 
-| Plugin type | Reserved range | Built-in IDs to avoid |
-|-------------|---------------|----------------------|
-| Tuner (`TunerGUIInterface`) | **100 – 199** | 0–9, 200–255 |
-| Standby (`TunerStandbyGUIInterface`) | **210 – 254** | 0–5, 200–201 |
+- **Stable.** Once your plugin is deployed and users have selected it, **never
+  change the uid.** The firmware stores the selected UI by uid in NVS
+  (non-volatile storage); changing it silently selects a different UI on next
+  boot. Copying a plugin to make a new one needs a *fresh* uid (re-scaffold; the
+  tool generates a new one).
+- **Unique & namespaced.** A uid is namespaced so two unrelated plugins never
+  collide without any central registry, and it must **never be a bare integer**
+  — that space is reserved for built-in UIs, whose uid is simply their fixed
+  number as a string (`"0"`, `"1"`, …). The loader rejects a plugin whose uid is
+  a bare integer or duplicates another plugin's uid.
 
-Pick **any unused value** in your range. If two plugins share an ID, the
-firmware logs a warning and only one will appear in the menu.
+The numeric ID is now a **firmware-internal assignment pool**, not something an
+author chooses. At load time the firmware hands each plugin the next free number
+in its reserved range (skipping built-ins and already-loaded plugins); a plugin's
+number may even differ between boots, which is fine because nothing persistent
+references it. For reference, the reserved pools are:
 
-Once your plugin is deployed and users have selected it, **never change its
-ID**. The firmware stores the selected UI by ID in NVS (non-volatile storage);
-an ID change silently selects a different UI on next boot.
+| Plugin type | Firmware assignment pool |
+|-------------|--------------------------|
+| Tuner (`TunerGUIInterface`) | **100 – 199** |
+| Standby (`TunerStandbyGUIInterface`) | **210 – 254** |
 
 ---
 
@@ -327,6 +384,17 @@ firmware, so it never drifts. The offline validator (§9) flags any unexported
 | `qt_get_monitoring_mode()` | `uint8_t` | Non-zero when monitoring mode is active |
 | `qt_get_note_name_palette()` | `lv_palette_t` | User's accent colour (`LV_PALETTE_NONE` = amber retro) |
 | `qt_get_show_cents()` | `uint8_t` | Non-zero when the user wants the cents value shown |
+| `qt_get_note_glyph(note, size)` | `const lv_image_dsc_t *` | Built-in note letter artwork (A–G / blank); pair with `qt_get_sharp_glyph()` |
+| `qt_get_sharp_glyph(size)` / `qt_get_blank_glyph(size)` | `const lv_image_dsc_t *` | Sharp (#) overlay / blank glyph. Sizes: `QT_GLYPH_SIZE_SMALL`…`_XLARGE` |
+| `qt_get_mute_glyph()` | `const lv_image_dsc_t *` | The mute indicator icon (draw when `show_mute_indicator` is set) |
+| `qt_note_is_sharp(note)` | `uint8_t` | Non-zero for A#, C#, D#, F#, G# |
+| `qt_uptime_ms()` | `uint32_t` | Monotonic milliseconds since boot — for animation / elapsed-time |
+| `qt_random_u32()` | `uint32_t` | Hardware random number — for particles, jitter, quiz prompts |
+
+**Touch input.** The pedal has a touchscreen. React to taps by adding an event
+callback: `lv_obj_add_event_cb(obj, cb, LV_EVENT_PRESSED, NULL)`, then inside the
+callback read the point with `lv_event_get_indev(e)` + `lv_indev_get_point(...)`.
+See [`docs/TOUCH.md`](docs/TOUCH.md).
 
 ### Standard library
 
@@ -405,6 +473,22 @@ firmware enters standby
   (see the examples for the pattern).
 - `display_frequency` receives `NOTE_NONE` as `note_name` when no pitch is
   detected. Always handle this case gracefully.
+- **Design for both orientations.** The pedal can be used in **portrait
+  (240×320)** or **landscape (320×240)**, and the user can switch between them.
+  Lay out your UI relative to the live `screen_width` / `screen_height` /
+  `is_landscape` globals rather than hard-coding `240`/`320`, so it looks right
+  either way. Both examples show this: `example_tuner` chooses a portrait vs.
+  landscape arrangement in `init()`, and `example_standby` recomputes its bounds
+  from the live globals on every frame. Your `init()` sees whichever orientation
+  is active when the UI starts; if you also want to adapt while it's running (the
+  user can rotate the display), read the globals during `display_frequency` / your
+  `lv_timer` and reposition, the way `example_standby` does.
+- **Consider smoothing the readings (tuner — optional, to taste).** Pitch data
+  arrives ~30×/second and can be a little jittery. Easing your needle/indicator
+  toward the new value, or low-pass-filtering the cents, makes the display feel
+  calm instead of twitchy. This is a stylistic choice, **not** a requirement —
+  some designs (strobes, fast meters) deliberately show the raw, immediate
+  movement. Do whatever fits the look you want.
 
 ---
 
@@ -453,11 +537,18 @@ cmake --build build --target validate
 
 ### Upload
 
+#### Using the Built-in Wi-Fi Server
 1. On Q-Tune, navigate to Settings > Wi-Fi and connect to your network. The
    device's IP address is shown on that screen.
 2. In a browser, open `http://<device-ip>/plugins`.
 3. Use the upload form to select your `.so` file.
 4. The file is written to `/data/plugins/` on the device's internal flash.
+
+#### Using USB Drive Mode
+1. With Q-Tune powered off, press and hold the foot switch while connecting it to your computer with a USB-C cable.
+2. Upload your `.so` file to the `/plugins/` folder. NOTE: If you've never uploaded a plugin, you may need to create the `/plugins/` directory at the root of the Q-Tune file system.
+3. Properly eject Q-Tune as a USB Drive.
+4. Disconnect the USB-C cable.
 
 ### Activate
 
@@ -470,6 +561,17 @@ valid plugins. Your plugin then appears in:
 
 Select it from the appropriate menu. The selection is persisted to NVS by
 the firmware.
+
+### Debugging
+
+The easiest way to observe the console output (debug messages) of Q-Tune is to use the web installer tool:
+
+1. Plug Q-Tune with a USB-C cable to your computer.
+2. Use the Chrome web browser and navigate to the [Firmware Installer](https://www.q-tune.com/install/) page.
+3. Scroll down and press the **Connect to device** button.
+4. Select Q-Tune from the list of devices (usually shows "USB JTAG...") and press the **Connect** button.
+5. Click the **Logs & Console** option.
+6. Q-Tune system and log messages will appear in the browser window.
 
 ---
 
@@ -501,7 +603,7 @@ loading resumes on the next restart without the BOOT button held.
 
 The `/plugins` web page lets you:
 
-- View all installed plugins with their ID, type, and enabled/disabled status.
+- View all installed plugins with their uid, type, and enabled/disabled status.
 - Upload a new `.so` (replaces an existing file of the same name).
 - Delete an installed plugin.
 - Re-enable a crash-disabled plugin.
@@ -512,7 +614,9 @@ The `/plugins` web page lets you:
 
 Copy one of the example projects to a new directory and follow these steps:
 
-- [ ] Update `get_id()` to an unused ID in the correct range.
+- [ ] Leave the descriptor `.uid` as the scaffold generated it (your stable
+      identity — never change it after publishing). You don't pick a number; the
+      firmware assigns one dynamically at load.
 - [ ] Update `get_name()` to a short descriptive string (shown in the menu).
 - [ ] Set `sdk_build` in the descriptor to a version string for your plugin.
 - [ ] Update `idf_component.yml`: keep `lvgl/lvgl: "==9.2.2"`.
@@ -524,3 +628,23 @@ Copy one of the example projects to a new directory and follow these steps:
       `align_settings_button()` for tuner plugins).
 - [ ] Delete any `lv_timer` / `lv_anim` you create in `cleanup()`.
 - [ ] Build with `idf.py build`, upload to `/plugins`, restart, select in UI.
+
+---
+
+## 12. Security
+
+A plugin is **native compiled code that runs unsandboxed** inside the firmware.
+There is no privilege boundary between a plugin and the rest of the device: a
+plugin runs with the same access as the built-in UIs and can read the host API,
+allocate memory, and draw to the screen directly.
+
+**Only install plugins you trust — ideally only ones you built yourself**, or that
+come from a source you trust, with source code you (or Claude Code) can read.
+Treat a `.so` from an unknown third party the way you would any untrusted program:
+don't run it on hardware you care about without reviewing it first.
+
+The firmware's crash-quarantine (after 2 crashes a plugin is disabled — see §10)
+and Safe Mode are **stability safety nets, not a security boundary.** They protect
+you from a buggy plugin, not a malicious one. When you build a plugin with the SDK
+from source, you can see exactly what it does — which is the safest path, and the
+one this SDK is designed around.

@@ -10,14 +10,11 @@
 #include "defines.h"
 
 /// @brief Implement a standby UI by implementing this interface.
+///
+/// NOTE: a plugin does NOT carry its own numeric ID. The firmware assigns a
+/// number dynamically at load time; your plugin's stable identity is the `uid`
+/// string in its QTunePluginDescriptor (the SDK scaffolding tool generates one).
 typedef struct {
-    /// @brief Returns a unique ID for the interface.
-    ///
-    /// Look up other implementations and make sure you don't use an ID that is
-    /// already being used. It's a uint8_t so that it can be stored as the
-    /// selected ID as a user setting. They must be in consecutive order.
-    uint8_t (*get_id)(void);
-
     /// @brief Returns the name of the standby interface that will be shown in user settings.
     const char * (*get_name)(void);
 
