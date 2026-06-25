@@ -5,7 +5,7 @@
 
 These are the **only** host symbols a Q-Tune plugin may reference. They are resolved by the firmware's ELF loader at load time; calling any other `lv_*` (or firmware) function leaves an unresolved relocation and the plugin will fail to load.
 
-Total exported symbols: **170**.
+Total exported symbols: **174**.
 
 In addition to the symbols below, standard C library functions (`printf`, `snprintf`, `memcpy`, `memset`, `malloc`, `free`, `strncpy`, …) and `<math.h>` functions (`fabsf`, `log2f`, `powf`, `roundf`, …) are available.
 
@@ -61,7 +61,7 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 ### Object — style setters
 
-`lv_obj_set_style_arc_color`, `lv_obj_set_style_arc_opa`, `lv_obj_set_style_arc_width`, `lv_obj_set_style_bg_color`, `lv_obj_set_style_bg_grad_color`, `lv_obj_set_style_bg_grad_dir`, `lv_obj_set_style_bg_opa`, `lv_obj_set_style_border_color`, `lv_obj_set_style_border_opa`, `lv_obj_set_style_border_width`, `lv_obj_set_style_clip_corner`, `lv_obj_set_style_img_recolor`, `lv_obj_set_style_img_recolor_opa`, `lv_obj_set_style_length`, `lv_obj_set_style_line_color`, `lv_obj_set_style_line_opa`, `lv_obj_set_style_line_rounded`, `lv_obj_set_style_line_width`, `lv_obj_set_style_opa`, `lv_obj_set_style_pad_all`, `lv_obj_set_style_pad_bottom`, `lv_obj_set_style_pad_left`, `lv_obj_set_style_pad_right`, `lv_obj_set_style_pad_row`, `lv_obj_set_style_pad_top`, `lv_obj_set_style_radius`, `lv_obj_set_style_shadow_color`, `lv_obj_set_style_shadow_width`, `lv_obj_set_style_text_align`, `lv_obj_set_style_text_color`, `lv_obj_set_style_text_font`, `lv_obj_set_style_transform_angle`, `lv_obj_set_style_transform_pivot_x`, `lv_obj_set_style_transform_pivot_y`
+`lv_obj_set_style_arc_color`, `lv_obj_set_style_arc_opa`, `lv_obj_set_style_arc_width`, `lv_obj_set_style_bg_color`, `lv_obj_set_style_bg_grad_color`, `lv_obj_set_style_bg_grad_dir`, `lv_obj_set_style_bg_opa`, `lv_obj_set_style_border_color`, `lv_obj_set_style_border_opa`, `lv_obj_set_style_border_width`, `lv_obj_set_style_clip_corner`, `lv_obj_set_style_image_recolor`, `lv_obj_set_style_image_recolor_opa`, `lv_obj_set_style_length`, `lv_obj_set_style_line_color`, `lv_obj_set_style_line_opa`, `lv_obj_set_style_line_rounded`, `lv_obj_set_style_line_width`, `lv_obj_set_style_opa`, `lv_obj_set_style_pad_all`, `lv_obj_set_style_pad_bottom`, `lv_obj_set_style_pad_left`, `lv_obj_set_style_pad_right`, `lv_obj_set_style_pad_row`, `lv_obj_set_style_pad_top`, `lv_obj_set_style_radius`, `lv_obj_set_style_shadow_color`, `lv_obj_set_style_shadow_width`, `lv_obj_set_style_text_align`, `lv_obj_set_style_text_color`, `lv_obj_set_style_text_font`, `lv_obj_set_style_transform_angle`, `lv_obj_set_style_transform_pivot_x`, `lv_obj_set_style_transform_pivot_y`
 
 ### Palette
 
@@ -97,6 +97,10 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 `qt_get_reference_frequency`, `qt_get_in_tune_cents_width`, `qt_get_monitoring_mode`, `qt_get_note_name_palette`, `qt_get_show_cents`
 
+### Note-name glyph image accessors
+
+`qt_get_note_glyph`, `qt_get_sharp_glyph`, `qt_get_blank_glyph`, `qt_note_is_sharp`
+
 ## LVGL fonts
 
 `lv_font_montserrat_14`, `lv_font_montserrat_18`, `lv_font_montserrat_24`, `lv_font_montserrat_26`, `lv_font_montserrat_28`, `lv_font_montserrat_40`, `lv_font_montserrat_48`
@@ -107,4 +111,4 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 ---
 
-Need a symbol that isn't here? It must first be added to the firmware's `main/plugins/qtune_plugin_symbols.txt` and re-exported; open an issue on the Q-Tune firmware repository to request it.
+Need a symbol that isn't here? It must first be added to the firmware's `main/plugins/qtune_plugin_symbols.txt` and re-exported. If there's an additional symbol you'd like exported, let us know on our Discord server: https://discord.gg/evtjkEj9GX

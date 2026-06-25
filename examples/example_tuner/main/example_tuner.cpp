@@ -6,12 +6,25 @@
  *
  * Minimal Q-Tune tuner plugin demonstrating the TunerGUIInterface contract.
  *
- * Layout (portrait, 240x320):
- *   - Large label in the centre showing the note name and octave (e.g. "A4").
- *   - A round lv_scale whose needle sweeps left/right with cents deviation.
- *     The needle turns the user's accent colour when in-tune.
+ * Layout — orientation-aware (the tuner can run portrait OR landscape). The note
+ * and the gauge are placed on opposite ends so they never overlap:
+ *   - Portrait (240x320):  note across the TOP,  gauge anchored to the BOTTOM.
+ *   - Landscape (320x240): note down the LEFT,   gauge anchored to the RIGHT.
+ * is_landscape (a host global) selects the arrangement at init; et_scale_size()
+ * keeps the gauge sized to the shorter edge so it always fits.
+ *
+ * Elements:
+ *   - The detected note, rendered with the firmware's built-in note artwork:
+ *     a letter glyph (A-G) plus a sharp (#) overlay for accidentals, fetched via
+ *     qt_get_note_glyph() / qt_get_sharp_glyph(). Both are recoloured to the
+ *     user's accent colour when in-tune.
+ *   - A round lv_scale needle gauge whose needle sweeps left/right with cents
+ *     deviation and turns the accent colour when in-tune.
  *   - The firmware's settings gear button is placed via align_settings_button().
  *   - A small reference-frequency badge in the top-right corner.
+ *
+ * The note glyphs live in firmware flash; the plugin references them through the
+ * host accessors rather than embedding its own image assets.
  *
  * Build output: example_tuner.so  (see CMakeLists.txt / qtune_project_so()).
  * Upload via the /plugins page served over Wi-Fi; the firmware loads plugins
@@ -97,24 +110,49 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 // ---------------------------------------------------------------------------
 #define SCALE_RANGE_MIN    (-500)
 #define SCALE_RANGE_MAX    (500)
-#define SCALE_SIZE_PCT     80    // % of screen_width
+
+// The gauge diameter is a percentage of the SHORTER screen edge. Landscape uses
+// a slightly smaller gauge so the note column fits comfortably beside it.
+#define SCALE_SIZE_PCT_PORTRAIT   72
+#define SCALE_SIZE_PCT_LANDSCAPE  66
+
+// Layout margins. Portrait stacks vertically (note on top, gauge on the bottom);
+// landscape places them side by side (note on the left, gauge on the right). In
+// both cases the note and gauge never overlap.
+#define NOTE_TOP_MARGIN     20   // portrait: px from the top edge to the note
+#define SCALE_BOTTOM_MARGIN 16   // portrait: px from the bottom edge to the gauge
+#define NOTE_SIDE_MARGIN    12   // landscape: px in from the left edge to the note
+#define SCALE_SIDE_MARGIN    8   // landscape: px in from the right edge to the gauge
+
+// Note artwork size. MEDIUM is the 100x100 set the built-in Meter uses; the
+// sharp overlay is the same size and aligns to the letter's right edge.
+#define NOTE_GLYPH_SIZE    QT_GLYPH_SIZE_MEDIUM
 
 // Module-level state — set in et_init(), nulled in et_cleanup().
 static lv_obj_t *s_screen     = NULL;
-static lv_obj_t *s_note_label = NULL;
+static lv_obj_t *s_note_img   = NULL;  // letter glyph (A-G / blank)
+static lv_obj_t *s_sharp_img  = NULL;  // sharp (#) overlay, hidden for naturals
 static lv_obj_t *s_ref_label  = NULL;
 static lv_obj_t *s_scale      = NULL;
 static lv_obj_t *s_needle     = NULL;  // lv_line inside the scale
 
 // Cached display state to minimise redundant LVGL calls.
 static TunerNoteName s_last_note    = NOTE_NONE;
-static int           s_last_octave  = -999;
 static float         s_last_cents   = 9999.f;
 static bool          s_last_in_tune = false;
 
 // ---------------------------------------------------------------------------
 // Interface implementations
 // ---------------------------------------------------------------------------
+
+// Gauge diameter, based on the SHORTER screen edge so the circle always fits
+// regardless of orientation. Used in both et_init() and et_display_frequency()
+// so the needle length stays in sync with the widget size.
+static lv_coord_t et_scale_size(void) {
+    lv_coord_t base = (screen_width < screen_height) ? screen_width : screen_height;
+    int pct = is_landscape ? SCALE_SIZE_PCT_LANDSCAPE : SCALE_SIZE_PCT_PORTRAIT;
+    return (lv_coord_t)((base * pct) / 100);
+}
 
 static uint8_t et_get_id(void) {
     // In the reserved tuner plugin range [100, 199]. Pick any unused value.
@@ -134,7 +172,6 @@ static void et_init(lv_obj_t *screen) {
 
     // Reset cached state so the first display_frequency call does a full draw.
     s_last_note    = NOTE_NONE;
-    s_last_octave  = -999;
     s_last_cents   = 9999.f;
     s_last_in_tune = false;
 
@@ -149,15 +186,31 @@ static void et_init(lv_obj_t *screen) {
     lv_obj_set_style_text_font(s_ref_label, &lv_font_montserrat_14, 0);
     lv_obj_align(s_ref_label, LV_ALIGN_TOP_RIGHT, -8, 8);
 
-    // Note-name + octave label — centre, shifted up so the scale sits below it.
-    s_note_label = lv_label_create(screen);
-    lv_label_set_text(s_note_label, "-");
-    lv_obj_set_style_text_font(s_note_label, &lv_font_montserrat_48, 0);
-    lv_obj_set_style_text_color(s_note_label, lv_color_white(), 0);
-    lv_obj_align(s_note_label, LV_ALIGN_CENTER, 0, -50);
+    // Note artwork — placed so the gauge never overlaps it: across the top in
+    // portrait, down the left side in landscape. We start on the blank glyph;
+    // display_frequency() swaps in the live letter. The images are greyscale
+    // masks, so img_recolor tints them (white now, accent in-tune).
+    s_note_img = lv_image_create(screen);
+    lv_image_set_src(s_note_img, qt_get_blank_glyph(NOTE_GLYPH_SIZE));
+    lv_obj_set_style_img_recolor_opa(s_note_img, LV_OPA_COVER, 0);
+    lv_obj_set_style_img_recolor(s_note_img, lv_color_white(), 0);
+    if (is_landscape) {
+        lv_obj_align(s_note_img, LV_ALIGN_LEFT_MID, NOTE_SIDE_MARGIN, 0);
+    } else {
+        lv_obj_align(s_note_img, LV_ALIGN_TOP_MID, 0, NOTE_TOP_MARGIN);
+    }
 
-    // Cents scale — round needle gauge.
-    lv_coord_t scale_size = (lv_coord_t)((screen_width * SCALE_SIZE_PCT) / 100);
+    // Sharp (#) overlay — hugs the right edge of the letter, hidden for naturals.
+    s_sharp_img = lv_image_create(screen);
+    lv_image_set_src(s_sharp_img, qt_get_sharp_glyph(NOTE_GLYPH_SIZE));
+    lv_obj_set_style_img_recolor_opa(s_sharp_img, LV_OPA_COVER, 0);
+    lv_obj_set_style_img_recolor(s_sharp_img, lv_color_white(), 0);
+    lv_obj_align_to(s_sharp_img, s_note_img, LV_ALIGN_OUT_RIGHT_MID, -16, 0);
+    lv_obj_add_flag(s_sharp_img, LV_OBJ_FLAG_HIDDEN);
+
+    // Cents scale — round needle gauge, opposite the note: bottom edge in
+    // portrait, right edge in landscape.
+    lv_coord_t scale_size = et_scale_size();
 
     s_scale = lv_scale_create(screen);
     lv_obj_set_size(s_scale, scale_size, scale_size);
@@ -177,7 +230,11 @@ static void et_init(lv_obj_t *screen) {
 
     lv_obj_set_style_line_color(s_scale, lv_color_hex(0x404040), LV_PART_ITEMS);
 
-    lv_obj_align(s_scale, LV_ALIGN_CENTER, 0, 40);
+    if (is_landscape) {
+        lv_obj_align(s_scale, LV_ALIGN_RIGHT_MID, -SCALE_SIDE_MARGIN, 0);
+    } else {
+        lv_obj_align(s_scale, LV_ALIGN_BOTTOM_MID, 0, -SCALE_BOTTOM_MARGIN);
+    }
 
     // Needle line inside the scale. Local inline styles keep colour updates in
     // display_frequency() to simple one-liners (no shared lv_style_t lifecycle).
@@ -198,23 +255,22 @@ static void et_display_frequency(float frequency,
                                   bool show_mute_indicator) {
     (void)frequency;
     (void)target_frequency;
+    (void)octave;
     (void)show_mute_indicator;
 
-    if (!s_note_label || !s_scale || !s_needle) { return; }
+    if (!s_note_img || !s_sharp_img || !s_scale || !s_needle) { return; }
 
-    // Update the note + octave label only when the value changes.
-    if (note_name != s_last_note || octave != s_last_octave) {
-        if (note_name == NOTE_NONE) {
-            lv_label_set_text(s_note_label, "-");
+    // Swap in the note artwork only when the note changes. qt_get_note_glyph()
+    // returns the bare letter (the blank glyph for NOTE_NONE); the sharp overlay
+    // is shown separately for accidentals, exactly as the built-in tuners do.
+    if (note_name != s_last_note) {
+        lv_image_set_src(s_note_img, qt_get_note_glyph(note_name, NOTE_GLYPH_SIZE));
+        if (qt_note_is_sharp(note_name)) {
+            lv_obj_remove_flag(s_sharp_img, LV_OBJ_FLAG_HIDDEN);
         } else {
-            char buf[8];
-            // name_for_note() is a static inline in tuner_math.h — compiles
-            // into the .so, no firmware symbol reference required.
-            snprintf(buf, sizeof(buf), "%s%d", name_for_note(note_name), octave);
-            lv_label_set_text(s_note_label, buf);
+            lv_obj_add_flag(s_sharp_img, LV_OBJ_FLAG_HIDDEN);
         }
-        s_last_note   = note_name;
-        s_last_octave = octave;
+        s_last_note = note_name;
     }
 
     // Update needle position when cents change by more than 0.2 ct.
@@ -223,8 +279,7 @@ static void et_display_frequency(float frequency,
         if (scaled < SCALE_RANGE_MIN) scaled = SCALE_RANGE_MIN;
         if (scaled > SCALE_RANGE_MAX) scaled = SCALE_RANGE_MAX;
 
-        lv_coord_t scale_size = (lv_coord_t)((screen_width * SCALE_SIZE_PCT) / 100);
-        lv_scale_set_line_needle_value(s_scale, s_needle, scale_size / 2, scaled);
+        lv_scale_set_line_needle_value(s_scale, s_needle, et_scale_size() / 2, scaled);
         s_last_cents = cents;
     }
 
@@ -240,7 +295,8 @@ static void et_display_frequency(float frequency,
         lv_color_t indicator_color = in_tune ? accent : lv_color_white();
 
         lv_obj_set_style_line_color(s_needle, indicator_color, LV_PART_MAIN);
-        lv_obj_set_style_text_color(s_note_label, indicator_color, 0);
+        lv_obj_set_style_img_recolor(s_note_img, indicator_color, 0);
+        lv_obj_set_style_img_recolor(s_sharp_img, indicator_color, 0);
         s_last_in_tune = in_tune;
     }
 }
@@ -253,7 +309,8 @@ static void et_cleanup(void) {
     // The host deletes all children of `screen` after cleanup(); we only null
     // our pointers. This example creates no timers/animations to tear down.
     s_screen     = NULL;
-    s_note_label = NULL;
+    s_note_img   = NULL;
+    s_sharp_img  = NULL;
     s_ref_label  = NULL;
     s_scale      = NULL;
     s_needle     = NULL;

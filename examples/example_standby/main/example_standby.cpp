@@ -13,6 +13,11 @@
  * tints the dot to the user's accent colour; when no pitch is detected the dot
  * reverts to white.
  *
+ * Orientation: works in BOTH portrait (240x320) and landscape (320x240). The
+ * bounce walls are recomputed every tick from the live screen_width/screen_height
+ * host globals (see es_timer_cb), so the animation fills whatever the current
+ * orientation is — no portrait-specific assumptions.
+ *
  * Build output: example_standby.so  (see CMakeLists.txt / qtune_project_so()).
  * Upload via the /plugins page served over Wi-Fi; the firmware loads it from
  * /data/plugins at boot.
