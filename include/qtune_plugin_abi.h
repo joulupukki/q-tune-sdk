@@ -10,9 +10,18 @@
 // contract plus the curated symbol export table.
 //
 // COMPATIBILITY RULES
-//   - Bump QTUNE_PLUGIN_ABI_VERSION whenever the layout of QTunePluginDescriptor,
-//     TunerGUIInterface, TunerStandbyGUIInterface, or the exported-symbol contract
-//     changes. The loader rejects any plugin whose abi_version differs.
+//   - The plugin ABI version is split into MAJOR.MINOR (see the macros below):
+//       * Bump MAJOR (and reset MINOR to 0) on a BREAKING change — anything that
+//         alters the binary layout of QTunePluginDescriptor, TunerGUIInterface,
+//         TunerStandbyGUIInterface, or the meaning of existing exported symbols.
+//         The loader rejects any plugin whose MAJOR differs.
+//       * Bump MINOR on a BACKWARD-COMPATIBLE additive change — e.g. a new callback
+//         appended to the END of an interface struct, or a new host accessor. The
+//         loader accepts a plugin whose MINOR is <= the firmware's, so plugins
+//         built against an older minor keep working; a plugin that needs a newer
+//         minor is rejected on firmware with an older minor.
+//     There is deliberately no PATCH: a change that does not alter the binary
+//     contract isn't an ABI change — track it with the firmware version instead.
 //   - LVGL struct layouts are baked into a plugin at compile time, so a plugin and
 //     the firmware MUST share the same LVGL major.minor. The loader rejects on a
 //     major.minor mismatch (patch drift is allowed).
@@ -27,8 +36,18 @@
 extern "C" {
 #endif
 
-// Increment on any breaking change to the plugin ABI (see rules above).
-#define QTUNE_PLUGIN_ABI_VERSION 1u
+// Plugin ABI version, split into major.minor (see COMPATIBILITY RULES above).
+// MAJOR bumps on a breaking change; MINOR bumps on a backward-compatible addition.
+#define QTUNE_PLUGIN_ABI_MAJOR 1u
+#define QTUNE_PLUGIN_ABI_MINOR 0u
+
+// Packed major.minor: major in the top 16 bits, minor in the low 16.
+#define QTUNE_PLUGIN_ABI_VERSION \
+    (((uint32_t)QTUNE_PLUGIN_ABI_MAJOR << 16) | (uint32_t)QTUNE_PLUGIN_ABI_MINOR)
+
+// Extract the major / minor halves of a packed ABI version.
+#define QTUNE_PLUGIN_ABI_GET_MAJOR(v) ((uint32_t)(v) >> 16)
+#define QTUNE_PLUGIN_ABI_GET_MINOR(v) ((uint32_t)(v) & 0xFFFFu)
 
 // Packed LVGL version the firmware/plugin was built against: 0xMMmmpp.
 #define QTUNE_LVGL_VERSION \
@@ -48,7 +67,7 @@ typedef enum {
 // the symbol name QTUNE_PLUGIN_DESCRIPTOR_SYMBOL. The loader dlsym()s it, validates
 // the version fields, then casts `interface` according to `type`.
 typedef struct {
-    uint32_t        abi_version;  // must equal QTUNE_PLUGIN_ABI_VERSION
+    uint32_t        abi_version;  // packed major.minor; loader needs same major, minor <= firmware
     uint32_t        lvgl_version; // QTUNE_LVGL_VERSION at plugin build time
     QTunePluginType type;
     const char     *sdk_build;    // freeform SDK/build tag, for logging only

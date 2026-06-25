@@ -230,8 +230,9 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 
 The loader checks:
 
-1. `abi_version == QTUNE_PLUGIN_ABI_VERSION` (currently 1). Mismatch → plugin
-   is skipped with an error log.
+1. ABI `major.minor` (currently 1.0): the plugin's **major must equal** the
+   firmware's and its **minor must be `<=`** the firmware's. Otherwise the plugin
+   is skipped with an error log. See §5 for what bumps each component.
 2. `QTUNE_LVGL_VERSION_COMPAT(lvgl_version) == QTUNE_LVGL_VERSION_COMPAT(firmware_lvgl_version)`.
    This compares only major.minor (top 16 bits). Mismatch → plugin skipped.
    Patch version drift (e.g. 9.2.0 vs 9.2.2) is allowed.
@@ -242,6 +243,16 @@ The loader checks:
 
 See [`COMPATIBILITY.md`](COMPATIBILITY.md) for the matrix of which SDK release,
 ABI version, and LVGL pin go with which firmware version.
+
+**Plugin ABI version (`major.minor`).** Your plugin's descriptor records the ABI
+it was built against (`QTUNE_PLUGIN_ABI_MAJOR` / `QTUNE_PLUGIN_ABI_MINOR`). The
+loader accepts it only when its **major equals** the firmware's and its **minor
+is `<=`** the firmware's. A *breaking* change to the descriptor / interface
+structs / exported-symbol contract bumps the major (older plugins are rejected);
+a *backward-compatible* addition bumps the minor (older plugins keep loading; a
+plugin needing a newer minor is rejected on older firmware). There is no patch
+component — a change that doesn't alter the binary contract isn't an ABI change
+and is tracked by the firmware version instead.
 
 The `.so` is compiled against the same LVGL headers as the firmware. Every
 LVGL struct (e.g. `lv_obj_t`, `lv_color_t`, `lv_style_t`) has its layout

@@ -9,7 +9,7 @@ upload — so you fail fast instead of discovering a problem at boot:
 
   * the file is a well-formed shared object,
   * it exports the `qtune_plugin_descriptor` symbol (default visibility),
-  * its abi_version matches this SDK,
+  * its ABI major matches this SDK and its ABI minor is <= this SDK's,
   * its LVGL major.minor matches this SDK,
   * its descriptor type is TUNER or STANDBY,
   * every undefined `lv_*` symbol it references is in the exported allowlist
@@ -76,11 +76,17 @@ ELF_LOADER_BUILTINS = {
 
 
 def read_expected_abi() -> int:
-    if not ABI_HEADER.exists():
-        return 1
-    m = re.search(r"#define\s+QTUNE_PLUGIN_ABI_VERSION\s+(\d+)",
-                  ABI_HEADER.read_text())
-    return int(m.group(1)) if m else 1
+    """Packed major.minor ABI the SDK targets (major << 16 | minor)."""
+    major, minor = 1, 0
+    if ABI_HEADER.exists():
+        text = ABI_HEADER.read_text()
+        mj = re.search(r"#define\s+QTUNE_PLUGIN_ABI_MAJOR\s+(\d+)", text)
+        mn = re.search(r"#define\s+QTUNE_PLUGIN_ABI_MINOR\s+(\d+)", text)
+        if mj:
+            major = int(mj.group(1))
+        if mn:
+            minor = int(mn.group(1))
+    return (major << 16) | minor
 
 
 def read_allowlist() -> set:
@@ -200,9 +206,14 @@ def main() -> int:
             else:
                 abi, lvgl, typ = desc
                 expected_abi = read_expected_abi()
-                if abi != expected_abi:
-                    errors.append(f"abi_version is {abi}, firmware expects "
-                                  f"{expected_abi}.")
+                p_major, p_minor = abi >> 16, abi & 0xFFFF
+                e_major, e_minor = expected_abi >> 16, expected_abi & 0xFFFF
+                # Loader rule: same major, and the plugin's minor must not exceed
+                # the firmware's (additive minors are backward-compatible).
+                if p_major != e_major or p_minor > e_minor:
+                    errors.append(
+                        f"abi_version is {p_major}.{p_minor}, firmware provides "
+                        f"{e_major}.{e_minor} (needs same major, minor <= firmware).")
                 plv = (lvgl >> 16 & 0xFF, lvgl >> 8 & 0xFF, lvgl & 0xFF)
                 if (plv[0], plv[1]) != expected_lvgl:
                     errors.append(
@@ -214,7 +225,7 @@ def main() -> int:
                                   "(TUNER) or 2 (STANDBY).")
                 else:
                     print(f"  type:         {TYPE_NAMES[typ]}")
-                    print(f"  abi_version:  {abi}")
+                    print(f"  abi_version:  {p_major}.{p_minor}")
                     print(f"  lvgl_version: {plv[0]}.{plv[1]}.{plv[2]}")
 
         # Undefined-symbol check: a symbol resolves iff it is in the firmware's
