@@ -88,11 +88,11 @@ Please:
 
 Claude Code will:
 
-- Call `python3 tools/new_plugin.py` to create a new project with a stable auto-generated uid (the plugin's identity), name prefix, and build tag. You don't pick a number — the firmware assigns one dynamically at load time.
+- Call `python3 tools/new_plugin.py --dest plugins` to create a new project under the `plugins/` folder with a stable auto-generated uid (the plugin's identity), name prefix, and build tag. You don't pick a number — the firmware assigns one dynamically at load time. (`plugins/` is the standard home for your projects; it stays separate from the SDK and survives a `git pull` to update the SDK.)
 - Write the C++ source code implementing your tuner or standby interface.
-- Run `./docker-build.sh <project-path>` to build it. Docker will download the pinned ESP-IDF and LVGL and compile your code.
+- Run `./docker-build.sh plugins/<your-project>` to build it. Docker will download the pinned ESP-IDF and LVGL and compile your code.
 - Run `python3 tools/validate_plugin.py <path-to-.so>` to check it before declaring success.
-- Show you the path to your `.so` file (usually something like `projects/my_tuner/build/my_tuner.so`).
+- Show you the path to your `.so` file (usually something like `plugins/my_tuner/build/my_tuner.so`).
 
 If the build or validation fails, Claude Code will show the error and suggest a fix. Follow the troubleshooting hints in `docs/TROUBLESHOOTING.md` if needed.
 

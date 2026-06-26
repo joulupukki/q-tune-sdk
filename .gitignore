@@ -13,3 +13,7 @@
 .DS_Store
 **/__pycache__/
 *.pyc
+
+# User plugin projects — the standard place to scaffold your own plugins.
+# Kept out of the SDK repo so your work stays separate and survives `git pull`.
+/plugins/

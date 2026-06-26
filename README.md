@@ -61,6 +61,7 @@ minimal starting points are in [`template/`](template/).
 10. [Crash recovery and safe mode](#10-crash-recovery-and-safe-mode)
 11. [Quick-start checklist](#11-quick-start-checklist)
 12. [Security](#12-security)
+13. [Disclaimer](#13-disclaimer)
 
 ---
 
@@ -198,6 +199,7 @@ pip install pyelftools
 q-tune-sdk/
 ├── README.md                       This guide
 ├── LICENSE  /  NOTICE.md           Apache-2.0 (you may sell your plugins)
+├── DISCLAIMER.md                   "As is", no warranty, use at your own risk
 ├── CONTRIBUTING.md  /  CODE_OF_CONDUCT.md
 ├── COMPATIBILITY.md                SDK ↔ ABI ↔ LVGL ↔ firmware version matrix
 ├── Dockerfile                      Pinned ESP-IDF v5.3.2 build environment
@@ -669,3 +671,18 @@ and Safe Mode are **stability safety nets, not a security boundary.** They prote
 you from a buggy plugin, not a malicious one. When you build a plugin with the SDK
 from source, you can see exactly what it does — which is the safest path, and the
 one this SDK is designed around.
+
+---
+
+## 13. Disclaimer
+
+This SDK and any plugins built with it are provided **"as is", without warranty of
+any kind.** You build, install, and run plugins **entirely at your own risk** — a
+faulty plugin can crash the pedal or render it temporarily unusable. To the maximum
+extent permitted by law, neither **Boyd Timothy** nor **Molinello Music** is liable
+for any damage to your device, equipment, or data, or any other loss arising from
+the use of this SDK or any plugin built with it. **Only install plugins you trust.**
+
+See [`DISCLAIMER.md`](DISCLAIMER.md) for the full text and the Apache-2.0
+[`LICENSE`](LICENSE) (Sections 7 and 8) for the governing warranty disclaimer and
+limitation of liability.

@@ -12,6 +12,34 @@ between a plugin that loads and one the firmware silently rejects at boot.
 
 ---
 
+## What the user tells you vs. what you add automatically
+
+The user describes the **look and feel** — *"a big glowing needle,"* *"bouncing
+stars,"* *"a green-to-red meter."* They will almost never mention the things that
+make a plugin *complete and correct*, because they don't know to. **Filling those
+in is your job, not theirs.** Build the following into every plugin **by default —
+without being asked, and without asking the user about them:**
+
+- **Both orientations** — portrait (240×320) *and* landscape (320×240). Never ship
+  a UI that only works one way.
+- **(Tuner) the full chrome** — the pitch readout (note + cents), the mute
+  indicator, and the Q-Tune logo settings button, positioned like `example_tuner`
+  (mute top-left, settings button bottom-right, clear of each other).
+- **A responsive feel** — a fast `display_frequency()`, cached state, no per-frame
+  object creation. Never sluggish or twitchy.
+- **Respect for the user's settings** — accent color, in-tune width, show-cents,
+  reference pitch.
+
+Treat this list as the **definition of done**: a plugin missing any of it is
+incomplete, *even though the user never mentioned it*. Don't turn these into
+questions or options — just include them. Save your questions for genuine
+*creative* ambiguity (e.g. a color scheme that matters to the look), never to push
+these baseline expectations back onto the user. The detailed rules live in
+"Design rules" and "Tuner chrome" below; this section is the standing instruction
+to apply them automatically every time.
+
+---
+
 ## What a plugin is
 
 A plugin is a small C++ file compiled to a shared object (`.so`) that the pedal
@@ -33,33 +61,38 @@ The UI library is **LVGL 9.2**.
 
 ## The golden path (do this every time)
 
-1. **Scaffold a uniquely-named project** with the tool — never hand-copy:
+1. **Scaffold a uniquely-named project** with the tool — never hand-copy.
+   Always scaffold into the repo's `plugins/` directory (`--dest plugins`):
    ```sh
-   python3 tools/new_plugin.py --name "Glow Needle" --type tuner
+   python3 tools/new_plugin.py --name "Glow Needle" --type tuner --dest plugins
    ```
    This creates a new project folder with a **unique function prefix, a stable
    auto-generated uid (the plugin's identity), and a unique build tag** already
    filled in. Doing this by hand is the #1 source of collisions — always use the
-   tool.
+   tool. `plugins/` is the **standard home for every plugin you build**: it's
+   gitignored, so the user's work stays separate from the SDK and survives a
+   `git pull` to update the SDK. (`--dest` already defaults to the SDK's
+   `plugins/` folder, so even bare `new_plugin.py` lands there — but pass it
+   explicitly to be unambiguous.)
 2. **Write the UI** by editing the project's `main/<name>.cpp` — implement the
    interface callbacks (see "The two interfaces" below). Reuse patterns from
    `examples/example_tuner` and `examples/example_standby`.
 3. **Build** (Docker, no local toolchain needed):
    ```sh
-   ./docker-build.sh path/to/your_project          # macOS / Linux
+   ./docker-build.sh plugins/glow_needle           # macOS / Linux
    ```
    ```powershell
-   .\docker-build.ps1 path\to\your_project          # Windows (PowerShell)
+   .\docker-build.ps1 plugins\glow_needle           # Windows (PowerShell)
    ```
-   Produces `path/to/your_project/build/<name>.so`. The build **runs the validator
+   Produces `plugins/glow_needle/build/<name>.so`. The build **runs the validator
    automatically** at the end (inside the container, which ships `pyelftools`), so
    a green build is already a validated `.so`. Read that output — if it reports an
    unexported symbol or version problem, fix it and rebuild.
 4. **Validate** — the build does this for you, but you can also run it standalone
    (e.g. to re-check a `.so` without rebuilding):
    ```sh
-   python3 tools/validate_plugin.py path/to/your_project/build/<name>.so   # macOS / Linux
-   python  tools/validate_plugin.py path/to/your_project/build/<name>.so   # Windows
+   python3 tools/validate_plugin.py plugins/glow_needle/build/<name>.so   # macOS / Linux
+   python  tools/validate_plugin.py plugins/glow_needle/build/<name>.so   # Windows
    ```
    The standalone validator needs Python's `pyelftools`. It ships with ESP-IDF; if
    you only have Docker and the command above reports it missing, run it inside the
@@ -126,6 +159,35 @@ fails to load (often silently) or crashes the pedal.
 
 ---
 
+## Design rules — make it feel good, not just load
+
+The Hard rules above keep a plugin from being rejected. These keep it from being
+*bad*. A plugin that loads but looks broken in one orientation or feels sluggish
+is still a failure. Apply all of these to every plugin:
+
+1. **Work in both orientations — portrait AND landscape.** The pedal runs portrait
+   (240×320) **or** landscape (320×240); the user chooses, and may rotate at any
+   time. **Never hard-code 240/320.** Lay out relative to the globals
+   `screen_width`, `screen_height`, and `is_landscape`: branch on `is_landscape`
+   in `init()` to pick a portrait-vs-landscape arrangement, and in animated UIs
+   re-read the globals each frame so the art refills the screen if it rotates.
+   Always confirm the result reads well in *both* shapes — both examples do this.
+2. **Stay fast — never bog down the UI.** `display_frequency()` is called
+   ~30×/second; keep each call well under 1 ms. Build every LVGL object **once**
+   in `init()` and only *mutate* it in `display_frequency()` — never create or
+   delete objects per frame. Cache the last note / cents / mute / in-tune state
+   and skip the LVGL update when nothing changed meaningfully (see the examples).
+   A twitchy, sluggish tuner is the most common quality failure.
+3. **(Tuner) draw the full readout and place the chrome correctly** — the note +
+   cents readout, the mute indicator, and the host's settings button. See
+   "Tuner chrome" below; follow `example_tuner` exactly.
+4. **Respect the user's live settings** — accent color
+   (`qt_get_note_name_palette()`), in-tune width (`qt_get_in_tune_cents_width()`),
+   show-cents (`qt_get_show_cents()`), and reference pitch
+   (`qt_get_reference_frequency()`). Don't hard-code what the user can configure.
+
+---
+
 ## The two interfaces
 
 The exact structs are in `include/tuner_ui_interface.h` and
@@ -144,6 +206,27 @@ void         display_frequency(float frequency, float target_frequency,
 void         align_settings_button(lv_obj_t *btn);  // position the gear button
 void         cleanup(void);                // delete timers/anims; null pointers
 ```
+
+#### Tuner chrome: the readout, the mute indicator, and the settings button
+
+Every tuner has three required pieces of "chrome." Users expect them to look and
+behave like the built-in tuners, so **follow `example_tuner` exactly** here:
+
+- **The note + cents readout** — the heart of the tuner. Show the detected note
+  (the glyph helpers `qt_get_note_glyph()` / `qt_get_sharp_glyph()`, or your own
+  art) and how far off it is (`cents`, via your needle / strobe / meter). Always
+  handle `NOTE_NONE` (nothing playing) — show the blank glyph, never a stale note.
+  Honor `qt_get_show_cents()` and color the in-tune state with the user's accent.
+- **The mute indicator** — when `show_mute_indicator` is true, show the mute glyph
+  (`qt_get_mute_glyph()`); hide it otherwise. The example parks it in the
+  **top-left** corner, recolored to the user's accent, and flips its visibility
+  **only when the muted state changes** (not every frame).
+- **The settings button (the Q-Tune logo)** — the host *owns* this button and
+  passes it to your `align_settings_button(lv_obj_t *btn)`; your only job is to
+  **position** it. The example aligns it to the **bottom-right** corner, kept
+  clear of the top-left mute indicator. Place it where it won't collide with your
+  readout — if you don't position it, it can land on top of your UI. Tapping it
+  opens Settings; **don't attach your own handler.**
 
 ### Standby — `TunerStandbyGUIInterface`
 ```c
@@ -199,12 +282,10 @@ wants.
   `qt_get_in_tune_cents_width()`, `qt_get_note_name_palette()` (the user's accent
   color), `qt_get_show_cents()`, `qt_get_monitoring_mode()`.
 - **Screen geometry & both orientations**: globals `screen_width`, `screen_height`,
-  `is_landscape`. **Design every tuner and standby UI to work in both portrait
-  (240×320) and landscape (320×240)** — the user can run the pedal either way. Lay
-  out relative to these globals instead of hard-coding 240/320: pick a
-  portrait-vs-landscape arrangement in `init()` (see `example_tuner`), and for
-  animations read the globals each frame so they refill the screen if it rotates
-  (see `example_standby`). Always check the result reads well in *both* shapes.
+  `is_landscape` — read these instead of hard-coding 240/320. Supporting both
+  portrait (240×320) and landscape (320×240) is mandatory; see Design rule 1.
+  `example_tuner` shows branching on `is_landscape` in `init()`; `example_standby`
+  shows re-reading the globals each frame so animations refill a rotated screen.
 - **Time**: `qt_uptime_ms()` — monotonic milliseconds since boot, for animation
   and elapsed-time logic ("how long has this note been held?").
 - **Randomness**: `qt_random_u32()` — for particles, jitter, quiz prompts.

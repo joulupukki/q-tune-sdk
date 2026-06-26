@@ -22,7 +22,9 @@ Usage:
 Options:
     --name      Display name shown in the pedal menu (required).
     --type      tuner | standby (required).
-    --dest      Parent directory to create the project in (default: current dir).
+    --dest      Parent directory to create the project in
+                (default: the SDK's plugins/ folder — the standard home for your
+                projects; gitignored, so it stays separate from the SDK).
     --uid       Stable plugin UID (auto-generated if omitted). Must be non-empty
                 and NOT a bare integer (that space is reserved for built-in UIs).
     --prefix    C function prefix (auto-derived from the name if omitted).
@@ -93,7 +95,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Scaffold a new Q-Tune plugin project.")
     ap.add_argument("--name", required=True, help="Display name (shown in the menu).")
     ap.add_argument("--type", required=True, choices=["tuner", "standby"])
-    ap.add_argument("--dest", default=".", help="Parent dir for the new project.")
+    ap.add_argument("--dest", default=str(SDK_ROOT / "plugins"),
+                    help="Parent dir for the new project (default: the SDK's plugins/ folder).")
     ap.add_argument("--uid", default=None,
                     help="Stable plugin UID (auto-generated if omitted).")
     ap.add_argument("--prefix", default=None, help="C function prefix (auto if omitted).")
