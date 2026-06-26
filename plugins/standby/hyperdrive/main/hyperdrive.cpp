@@ -69,9 +69,9 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 #define TIMER_MS  40              // ~25 fps
 #define ACCEL     1.045f          // radial growth per frame (perspective)
 
-#define ASTER_GLYPH  QT_GLYPH_SIZE_MEDIUM   // note-letter artwork for the asteroid
-#define ASTER_PX     100                    // pixel size of ASTER_GLYPH
-#define ASTER_SHARP_DX (ASTER_PX - 18)      // sharp overlay offset (matches the tuners)
+#define ASTER_GLYPH  QT_GLYPH_SIZE_SMALL    // small note-letter artwork for the asteroid
+#define ASTER_PX     50                     // pixel size of ASTER_GLYPH
+#define ASTER_SHARP_DX (ASTER_PX - 9)       // sharp overlay offset (scaled from the tuners' 100px)
 
 typedef struct {
     float a;     // angle (radians) — fixed travel direction
