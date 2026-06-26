@@ -20,11 +20,18 @@
  *     user's accent colour when in-tune.
  *   - A round lv_scale needle gauge whose needle sweeps left/right with cents
  *     deviation and turns the accent colour when in-tune.
- *   - The firmware's settings gear button is placed via align_settings_button().
- *   - A small reference-frequency badge in the top-right corner.
+ *   - A mute indicator (qt_get_mute_glyph()) in the top-LEFT corner, shown only
+ *     while the host reports the signal is muted (show_mute_indicator), drawn in
+ *     the user's selected note-name accent colour (qt_get_note_name_palette()).
+ *   - The firmware's settings button — which is the Q-Tune logo — placed in the
+ *     top-RIGHT corner via align_settings_button(). Tapping it opens settings.
  *
- * The note glyphs live in firmware flash; the plugin references them through the
- * host accessors rather than embedding its own image assets.
+ * The reference pitch is intentionally NOT drawn here: the firmware shows its own
+ * reference-pitch indicator (bottom-centre) when the tuner loads and when you
+ * change it, so a plugin doesn't need to.
+ *
+ * The note/mute glyphs live in firmware flash; the plugin references them through
+ * the host accessors rather than embedding its own image assets.
  *
  * Build output: example_tuner.so  (see CMakeLists.txt / qtune_project_so()).
  * Upload via the /plugins page served over Wi-Fi; the firmware loads plugins
@@ -124,6 +131,7 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 #define SCALE_BOTTOM_MARGIN 16   // portrait: px from the bottom edge to the gauge
 #define NOTE_SIDE_MARGIN    12   // landscape: px in from the left edge to the note
 #define SCALE_SIDE_MARGIN    8   // landscape: px in from the right edge to the gauge
+#define CORNER_MARGIN        8   // inset for the corner status icons (mute / logo)
 
 // Note artwork size. MEDIUM is the 100x100 set the built-in Meter uses; the
 // sharp overlay is the same size and aligns to the letter's right edge.
@@ -133,7 +141,7 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 static lv_obj_t *s_screen     = NULL;
 static lv_obj_t *s_note_img   = NULL;  // letter glyph (A-G / blank)
 static lv_obj_t *s_sharp_img  = NULL;  // sharp (#) overlay, hidden for naturals
-static lv_obj_t *s_ref_label  = NULL;
+static lv_obj_t *s_mute_img   = NULL;  // mute indicator, hidden unless muted
 static lv_obj_t *s_scale      = NULL;
 static lv_obj_t *s_needle     = NULL;  // lv_line inside the scale
 
@@ -141,6 +149,7 @@ static lv_obj_t *s_needle     = NULL;  // lv_line inside the scale
 static TunerNoteName s_last_note    = NOTE_NONE;
 static float         s_last_cents   = 9999.f;
 static bool          s_last_in_tune = false;
+static bool          s_last_muted   = false;
 
 // ---------------------------------------------------------------------------
 // Interface implementations
@@ -153,6 +162,14 @@ static lv_coord_t et_scale_size(void) {
     lv_coord_t base = (screen_width < screen_height) ? screen_width : screen_height;
     int pct = is_landscape ? SCALE_SIZE_PCT_LANDSCAPE : SCALE_SIZE_PCT_PORTRAIT;
     return (lv_coord_t)((base * pct) / 100);
+}
+
+// The user's selected note-name accent colour (Amber if they've not picked one).
+// Used for the in-tune highlight, the mute indicator, and the reference readout.
+static lv_color_t et_accent_color(void) {
+    lv_palette_t palette = qt_get_note_name_palette();
+    return (palette == LV_PALETTE_NONE) ? lv_palette_main(LV_PALETTE_AMBER)
+                                        : lv_palette_main(palette);
 }
 
 static const char *et_get_name(void) {
@@ -170,17 +187,7 @@ static void et_init(lv_obj_t *screen) {
     s_last_note    = NOTE_NONE;
     s_last_cents   = 9999.f;
     s_last_in_tune = false;
-
-    // Reference-frequency badge — top-right corner.
-    s_ref_label = lv_label_create(screen);
-    {
-        char buf[24];
-        snprintf(buf, sizeof(buf), "A4=%d", (int)qt_get_reference_frequency());
-        lv_label_set_text(s_ref_label, buf);
-    }
-    lv_obj_set_style_text_color(s_ref_label, lv_color_hex(0x808080), 0);
-    lv_obj_set_style_text_font(s_ref_label, &lv_font_montserrat_14, 0);
-    lv_obj_align(s_ref_label, LV_ALIGN_TOP_RIGHT, -8, 8);
+    s_last_muted   = false;
 
     // Note artwork — placed so the gauge never overlaps it: across the top in
     // portrait, down the left side in landscape. We start on the blank glyph;
@@ -203,6 +210,16 @@ static void et_init(lv_obj_t *screen) {
     lv_obj_set_style_img_recolor(s_sharp_img, lv_color_white(), 0);
     lv_obj_align_to(s_sharp_img, s_note_img, LV_ALIGN_OUT_RIGHT_MID, -16, 0);
     lv_obj_add_flag(s_sharp_img, LV_OBJ_FLAG_HIDDEN);
+
+    // Mute indicator — top-left corner, recoloured red so it reads as a clear
+    // "signal muted" status. Hidden until the host reports a mute in
+    // display_frequency(). The mute glyph is a greyscale mask like the note art.
+    s_mute_img = lv_image_create(screen);
+    lv_image_set_src(s_mute_img, qt_get_mute_glyph());
+    lv_obj_set_style_img_recolor_opa(s_mute_img, LV_OPA_COVER, 0);
+    lv_obj_set_style_img_recolor(s_mute_img, et_accent_color(), 0);
+    lv_obj_align(s_mute_img, LV_ALIGN_TOP_LEFT, CORNER_MARGIN, CORNER_MARGIN);
+    lv_obj_add_flag(s_mute_img, LV_OBJ_FLAG_HIDDEN);
 
     // Cents scale — round needle gauge, opposite the note: bottom edge in
     // portrait, right edge in landscape.
@@ -252,9 +269,18 @@ static void et_display_frequency(float frequency,
     (void)frequency;
     (void)target_frequency;
     (void)octave;
-    (void)show_mute_indicator;
 
-    if (!s_note_img || !s_sharp_img || !s_scale || !s_needle) { return; }
+    if (!s_note_img || !s_sharp_img || !s_mute_img || !s_scale || !s_needle) { return; }
+
+    // Show / hide the mute indicator only when the muted state changes.
+    if (show_mute_indicator != s_last_muted) {
+        if (show_mute_indicator) {
+            lv_obj_remove_flag(s_mute_img, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_mute_img, LV_OBJ_FLAG_HIDDEN);
+        }
+        s_last_muted = show_mute_indicator;
+    }
 
     // Swap in the note artwork only when the note changes. qt_get_note_glyph()
     // returns the bare letter (the blank glyph for NOTE_NONE); the sharp overlay
@@ -284,11 +310,7 @@ static void et_display_frequency(float frequency,
                    (fabsf(cents) <= (float)qt_get_in_tune_cents_width());
 
     if (in_tune != s_last_in_tune) {
-        lv_palette_t palette = qt_get_note_name_palette();
-        lv_color_t accent = (palette == LV_PALETTE_NONE)
-                                ? lv_palette_main(LV_PALETTE_AMBER)
-                                : lv_palette_main(palette);
-        lv_color_t indicator_color = in_tune ? accent : lv_color_white();
+        lv_color_t indicator_color = in_tune ? et_accent_color() : lv_color_white();
 
         lv_obj_set_style_line_color(s_needle, indicator_color, LV_PART_MAIN);
         lv_obj_set_style_img_recolor(s_note_img, indicator_color, 0);
@@ -298,7 +320,10 @@ static void et_display_frequency(float frequency,
 }
 
 static void et_align_settings_button(lv_obj_t *btn) {
-    lv_obj_align(btn, LV_ALIGN_BOTTOM_RIGHT, -10, -10);
+    // The host's settings button is the Q-Tune logo. Park it in the top-right
+    // corner — clear of the note (top-centre / left) and the gauge (bottom /
+    // right-centre), and balancing the mute indicator in the top-left.
+    lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, -CORNER_MARGIN, CORNER_MARGIN);
 }
 
 static void et_cleanup(void) {
@@ -307,7 +332,7 @@ static void et_cleanup(void) {
     s_screen     = NULL;
     s_note_img   = NULL;
     s_sharp_img  = NULL;
-    s_ref_label  = NULL;
+    s_mute_img   = NULL;
     s_scale      = NULL;
     s_needle     = NULL;
 }

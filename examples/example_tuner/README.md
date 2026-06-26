@@ -2,18 +2,30 @@
 
 This project builds `example_tuner.so`, a minimal tuner UI plugin for Q-Tune.
 It demonstrates how to implement `TunerGUIInterface`, export the plugin
-descriptor, and use LVGL widgets (label + `lv_scale` needle gauge) together with
-the host API accessors (`qt_get_reference_frequency`,
-`qt_get_in_tune_cents_width`, etc.).
+descriptor, and use LVGL widgets (note glyphs + an `lv_scale` needle gauge)
+together with the host API accessors (`qt_get_note_glyph`, `qt_get_mute_glyph`,
+`qt_get_in_tune_cents_width`, `qt_get_note_name_palette`, etc.).
 
 ## What it looks like
 
-- A large note-name + octave label in the centre (e.g. "A4").
+- The detected note drawn with the firmware's built-in artwork: a letter glyph
+  (A–G) plus a sharp (#) overlay for accidentals.
 - A round `lv_scale` needle gauge whose needle sweeps with the cents deviation
   as the detected pitch drifts flat or sharp.
-- The needle and note label switch to the user's accent colour when the
-  pitch is within the configured in-tune window.
-- A small "A4=440" reference-frequency label in the top-right corner.
+- The note and needle switch to the user's accent colour when the pitch is
+  within the configured in-tune window.
+- A **mute indicator** in the top-left corner, shown only while the signal is
+  muted, in the user's selected note-name accent colour
+  (`qt_get_note_name_palette()`).
+- The **Q-Tune logo settings button** (provided by the firmware) in the top-right
+  corner — tap it to open settings.
+
+It deliberately does **not** draw a reference-pitch readout: the firmware shows
+its own reference-pitch indicator (bottom-centre) when the tuner loads and when
+you change it.
+
+The layout is orientation-aware (portrait: note on top, gauge on the bottom;
+landscape: note on the left, gauge on the right).
 
 ## Prerequisites
 
