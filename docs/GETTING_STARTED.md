@@ -20,7 +20,7 @@ Your plugin will:
 2. **Code** — Claude Code writes or edits the C++ file based on your description.
 3. **Build** — Docker compiles it to a `.so` shared object.
 4. **Validate** — a Python script checks for common mistakes before upload.
-5. **Upload** — you copy it to your pedal via Wi-Fi or USB.
+5. **Upload** — you copy it to your pedal via USB Drive Mode or Wi-Fi.
 6. **Select** — you pick it in the pedal's settings menu.
 
 ## Step 1: Install Docker
@@ -149,7 +149,7 @@ If something goes wrong:
 - [ ] Claude Code open with the SDK folder.
 - [ ] Asked Claude Code to scaffold and build your plugin.
 - [ ] Plugin validated and built successfully.
-- [ ] Uploaded to pedal via Wi-Fi or USB.
+- [ ] Uploaded to pedal via USB Drive Mode or Wi-Fi.
 - [ ] Pedal restarted.
 - [ ] Plugin selected in Settings menu.
 - [ ] Plugin works and looks good.

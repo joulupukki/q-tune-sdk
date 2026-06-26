@@ -96,6 +96,20 @@ After restart, your plugin appears in the appropriate settings menu:
 
 The selection is saved to the pedal's non-volatile storage. Next time you power on, that plugin will be active.
 
+## Managing installed plugins
+
+Plugins live as `.so` files in the pedal's `/data/plugins/` folder (it shows up as
+`/plugins` on the USB drive). You can manage that folder **either way**, whichever
+is handier — the rest of this guide just refers to the `/plugins` folder:
+
+- **USB Drive Mode** — mount the pedal (hold the foot switch at power-on) and add,
+  replace, delete, or rename files in `/plugins` directly.
+- **The `/plugins` web page** — over Wi-Fi at `http://<device-ip>/plugins`; it also
+  shows each plugin's type, ID, and enabled/disabled status, with Upload, Delete,
+  and Re-enable buttons.
+
+Any change takes effect after a restart.
+
 ## Updating your plugin
 
 To update an existing plugin:
@@ -117,35 +131,25 @@ Multiple plugins can be installed at once. Only the one selected in the menu is 
 
 ## Deleting a plugin
 
-To remove a plugin:
-
-1. Open `http://<device-ip>/plugins` in your browser (Wi-Fi mode).
-2. Look for your plugin in the list.
-3. Click **Delete** next to it.
-4. The file `/data/plugins/<name>.so` is erased.
-
-Alternatively, use USB Drive Mode to mount the `/plugins` folder and delete the file manually.
+Remove `<name>.so` from the `/plugins` folder — delete the file over USB Drive
+Mode, or use the **Delete** button on the `/plugins` web page. Restart for it to
+leave the menu.
 
 ## Viewing installed plugins
 
-Visit `http://<device-ip>/plugins` to see:
-
-- Plugin name, type (Tuner or Standby), and ID.
-- Whether each plugin is enabled or disabled (crash-quarantined plugins show as disabled).
-- Upload and delete buttons.
-- Re-enable button for crash-disabled plugins.
+List the `/plugins` folder to see which `.so` files are installed. The `/plugins`
+web page shows more — each plugin's name, type (Tuner or Standby), ID, and
+enabled/disabled status (crash-quarantined plugins show as disabled), plus
+Upload/Delete/Re-enable buttons.
 
 ## Crash-disabled plugins
 
 If a plugin crashes during init or display, the firmware quarantines it (see `docs/TROUBLESHOOTING.md`). The filename becomes `<name>.so.disabled`. The plugin won't load on restart.
 
-To re-enable a crash-disabled plugin:
-
-1. Open `http://<device-ip>/plugins`.
-2. Find your plugin in the list (it will show as disabled).
-3. Click **Re-enable**.
-
-The firmware renames the file back to `<name>.so` and it will load on the next restart. (If it crashes again, it's disabled again after 2 strikes.)
+To re-enable a crash-disabled plugin, rename its file from `<name>.so.disabled`
+back to `<name>.so` in the `/plugins` folder (over USB Drive Mode), or click
+**Re-enable** on the `/plugins` web page. It loads again on the next restart. (If
+it crashes again, it's disabled again after 2 strikes.)
 
 If your plugin keeps crashing, see `docs/TROUBLESHOOTING.md` for common causes and fixes.
 
@@ -165,7 +169,8 @@ If a plugin breaks the pedal entirely:
 
 1. See `docs/TROUBLESHOOTING.md` for Safe Mode recovery.
 2. Hold **BOOT button (GPIO0)** at power-on to skip all plugins and run only built-ins.
-3. Once in Safe Mode, use Wi-Fi to access `/plugins` and delete the bad plugin.
+3. Once in Safe Mode, remove the bad plugin from the `/plugins` folder — over USB
+   Drive Mode, or from the `/plugins` web page over Wi-Fi.
 
 ## Quick checklist
 

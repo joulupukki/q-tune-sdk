@@ -50,13 +50,13 @@ unfamiliar term below.)
         ▼
   gauge.so   ← position-independent, all internals hidden
         │
-        │  Upload via http://<device-ip>/plugins in Wi-Fi mode.
+        │  USB Drive mode: press and hold the foot switch at
+        │  power up and drop *.so file(s) into the /plugins
+        │  directory.
         │
         │                          or
         │
-        │  Use USB Drive mode (press and hold the foot switch
-        │  at power up) and drop *.so file(s) into the /plugins
-        │  directory.
+        │  Upload via http://<device-ip>/plugins over Wi-Fi.
         ▼
   /data/plugins/gauge.so   (internal flash, FAT32)
         │
@@ -554,8 +554,9 @@ cmake --build build --target validate
 
 ### Upload & activate
 
-Upload the `.so` over Wi-Fi (the pedal's `http://<device-ip>/plugins` page) or
-USB Drive mode, then restart and select it under *Settings > Tuner UI* (for
+Copy the `.so` into the pedal's `/plugins` folder — over USB Drive Mode, or via
+the pedal's `http://<device-ip>/plugins` page over Wi-Fi — then restart and select
+it under *Settings > Tuner UI* (for
 `QTUNE_PLUGIN_TUNER`) or *Settings > Standby Screen* (for `QTUNE_PLUGIN_STANDBY`).
 The selection is persisted to NVS by the firmware.
 
@@ -583,7 +584,8 @@ firmware marks the plugin as disabled and falls back to the default built-in
 UI (Meter for tuner, Basic for standby). A log message identifying the plugin
 and crash count is written to the serial monitor.
 
-Re-enable a disabled plugin from the `/plugins` web page.
+Re-enable a disabled plugin by renaming `<name>.so.disabled` back to `<name>.so`
+in the `/plugins` folder (over USB Drive Mode), or from the `/plugins` web page.
 
 ### Safe mode (BOOT button)
 
@@ -592,9 +594,10 @@ Mode all plugins are bypassed and the firmware runs only built-in UIs. This
 lets you recover from a plugin that crashes during boot before the Wi-Fi stack
 is up.
 
-While in Safe Mode, connect over Wi-Fi (the firmware still starts the server)
-and visit `/plugins` to delete or update the offending plugin. Normal plugin
-loading resumes on the next restart without the BOOT button held.
+While in Safe Mode, remove or replace the offending plugin in the `/plugins`
+folder — over USB Drive Mode, or over Wi-Fi at `/plugins` (the firmware still
+starts the server in Safe Mode). Normal plugin loading resumes on the next
+restart without the BOOT button held.
 
 ### Plugin management page (`/plugins`)
 

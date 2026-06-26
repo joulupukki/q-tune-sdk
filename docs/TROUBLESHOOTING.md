@@ -37,8 +37,8 @@ python3 tools/validate_plugin.py build/<your-plugin>.so
 |---|---|
 | Plugin wasn't restarted after upload | Power-cycle the pedal or go to Settings → Restart |
 | Plugin has a missing or invalid `uid` | Every plugin needs a stable `uid` string in its descriptor. The scaffolding tool (`new_plugin.py`) generates one automatically; if you hand-edited it, make sure it's set and is **not** a bare integer (that space is reserved for built-ins). The firmware assigns the numeric slot for you — you don't choose a number |
-| Two installed plugins share the same `uid` | This happens if you copied a plugin's files without changing its `uid` — the firmware loads only one of them. Give each its own uid (re-running `new_plugin.py` generates a fresh one). Check the `/plugins` web page to see what's installed |
-| Plugin validation failed but was uploaded anyway | Visit `http://<pedal-ip>/plugins` and check if the plugin is listed as disabled. See "Crash-disabled plugins" below |
+| Two installed plugins share the same `uid` | This happens if you copied a plugin's files without changing its `uid` — the firmware loads only one of them. Give each its own uid (re-running `new_plugin.py` generates a fresh one). List the `/plugins` folder (over USB Drive Mode, or the `/plugins` web page) to see what's installed |
+| Plugin validation failed but was uploaded anyway | Check whether it shows as disabled — a `<name>.so.disabled` file in the `/plugins` folder, or the disabled state on the `/plugins` web page. See "Crash-disabled plugins" below |
 | Plugin loads but wrong interface type | You built a Tuner but looked in Settings → Standby Screen (or vice versa). Check which kind you implemented |
 
 **Tip:** the serial console prints the exact reason a plugin was skipped (e.g.
@@ -87,7 +87,7 @@ If the plugin is crash-quarantined (`.so.disabled`), see "Re-enabling crash-disa
 
 ### Pedal keeps rebooting / crashes on boot
 
-**Cause**: Your plugin crashes during `init()` before Wi-Fi comes up, so you can't access the `/plugins` page to delete it.
+**Cause**: Your plugin crashes during `init()`, so the pedal can't boot normally.
 
 **Fix**: Use Safe Mode to bypass all plugins and recover:
 
@@ -96,9 +96,9 @@ If the plugin is crash-quarantined (`.so.disabled`), see "Re-enabling crash-disa
 3. While holding BOOT, power on the pedal.
 4. Keep holding for ~2 seconds after the screen comes on, then release.
 5. The pedal boots with all plugins disabled and shows only built-in UIs.
-6. Go to **Settings → Wi-Fi** and connect.
-7. Open `http://<device-ip>/plugins` and delete or replace the bad plugin.
-8. Power-cycle (no BOOT button this time) to resume normal operation.
+6. Remove (or replace) the bad plugin in the `/plugins` folder — easiest over USB
+   Drive Mode, or from the `/plugins` web page over Wi-Fi (Settings → Wi-Fi to connect).
+7. Power-cycle (no BOOT button this time) to resume normal operation.
 
 If you don't know which button is BOOT, refer to your pedal's documentation or try the small unlabeled button on the side.
 
@@ -162,12 +162,10 @@ static void on_tap(lv_event_t *e) {
 If your plugin has crashed twice, it's quarantined as `<name>.so.disabled`. To re-enable it:
 
 1. Fix the bug in your code.
-2. Rebuild, revalidate, re-upload (use the same filename; it will replace the `.so` file).
-3. Open `http://<pedal-ip>/plugins` in your browser.
-4. Find the plugin in the list (it shows as disabled).
-5. Click **Re-enable**.
-6. Restart the pedal.
-7. Your fixed plugin loads on boot.
+2. Rebuild, revalidate, and copy the new `.so` into `/plugins` (use the same filename so it replaces the old file).
+3. Re-enable it: rename `<name>.so.disabled` back to `<name>.so` in the `/plugins` folder (over USB Drive Mode), or click **Re-enable** on the `/plugins` web page. (Replacing the file in step 2 also clears the disabled state.)
+4. Restart the pedal.
+5. Your fixed plugin loads on boot.
 
 If it crashes again, repeat the process or investigate the crash logs (see below).
 
@@ -316,15 +314,14 @@ lv_obj_set_style_bg_color(obj, accent, 0);
 - [ ] Hold BOOT button (GPIO0).
 - [ ] Power on while holding.
 - [ ] Release after 2 seconds.
-- [ ] Connect to Wi-Fi (Settings).
-- [ ] Visit `http://<ip>/plugins` and delete/replace plugin.
+- [ ] Remove/replace the bad plugin in `/plugins` (USB Drive Mode, or the `/plugins` web page over Wi-Fi).
 - [ ] Power-cycle normally.
 
 **Plugin crashes after loading (crash-quarantined):**
 - [ ] Fix the bug in your code.
 - [ ] Rebuild and revalidate.
 - [ ] Re-upload (same filename).
-- [ ] Open `http://<ip>/plugins` and click **Re-enable**.
+- [ ] Re-enable it: rename `<name>.so.disabled` → `<name>.so` in `/plugins` (USB Drive Mode), or click **Re-enable** on the `/plugins` web page.
 - [ ] Restart pedal.
 
 **Stale build cache:**
