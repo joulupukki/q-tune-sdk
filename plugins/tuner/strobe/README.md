@@ -1,8 +1,10 @@
 # strobe — Q-Tune Tuner Plugin Sample
 
 This project builds `strobe.so`, a tuner UI plugin for Q-Tune in the style of a
-classic mechanical / Peterson-type **strobe** tuner. It's one of the bundled
-tuner samples (alongside [`gauge`](../gauge)) — copy it and build on it.
+classic mechanical / Peterson-type **strobe** tuner. It appears in the menu as
+**"Phase"** (the firmware already has a built-in tuner named "Strobe"). It's one
+of the bundled tuner samples (alongside [`gauge`](../gauge)) — copy it and build
+on it.
 
 ## What it looks like
 
@@ -39,7 +41,7 @@ Output: `build/strobe.so` (the Docker build runs the validator automatically).
 
 1. Connect Q-Tune to Wi-Fi, then open `http://<device-ip>/plugins` in a browser.
 2. Upload `build/strobe.so` and restart the device.
-3. Select "Q Strobe" from Settings > Tuner UI.
+3. Select "Phase" from Settings > Tuner UI.
 
 ## Plugin identity
 

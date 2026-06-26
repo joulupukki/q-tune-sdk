@@ -1,5 +1,5 @@
 /*
- * strobe.cpp — Strobe
+ * strobe.cpp — Phase
  *
  * A Q-Tune TUNER plugin in the style of a classic mechanical / Peterson-type
  * STROBE tuner. Instead of a needle it shows several horizontal bands of
@@ -11,7 +11,7 @@
  *   - dead in tune: the pattern FREEZES and snaps to the user's accent colour
  *
  * Each band scrolls at a slightly different rate (like the octave rows on a real
- * strobe), so a locked note produces a striking "everything stops at once" read.
+ * strobe), so a locked note produces a clear "everything stops at once" read.
  *
  * Colour discipline: while searching, the stripes are a calm neutral grey; the
  * instant the note is inside the in-tune window they turn the user's chosen accent
@@ -28,6 +28,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <limits.h>
 
 // --- Interface callbacks (forward declarations) ----------------------------
 static const char  *str_get_name(void);
@@ -73,6 +74,8 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 // Tunable layout / animation constants
 // ---------------------------------------------------------------------------
 #define NOTE_GLYPH_SIZE   QT_GLYPH_SIZE_MEDIUM   // 100px note artwork
+#define NOTE_GLYPH_PX     100                    // pixel height of NOTE_GLYPH_SIZE
+#define NOTE_TOP_MARGIN   18                     // note y-offset from the top edge
 
 #define NUM_BANDS         4          // horizontal strobe rows
 #define MAX_BARS          28         // generous upper bound for the widest screen
@@ -119,6 +122,7 @@ static int            s_color_state = -1;        // 0 none, 1 searching, 2 locke
 static TunerNoteName  s_last_note   = NOTE_NONE;
 static bool           s_last_muted  = false;
 static bool           s_show_cents  = false;
+static int            s_cents_q     = INT_MIN;   // last shown cents (tenths) — skip redundant relabels
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -129,7 +133,7 @@ static lv_color_t str_accent(void) {
                                   : lv_palette_main(p);
 }
 
-static const char *str_get_name(void) { return "Q Strobe"; }
+static const char *str_get_name(void) { return "Phase"; }
 static TuningUIType str_get_type(void) { return TuningUITypeStandard; }
 
 // ---------------------------------------------------------------------------
@@ -237,6 +241,7 @@ static void str_init(lv_obj_t *screen) {
     s_cents   = 0.f;
     s_speed   = 0.f;
     s_show_cents = qt_get_show_cents() != 0;
+    s_cents_q = INT_MIN;
     for (int b = 0; b < NUM_BANDS; b++) { s_phase[b] = (float)(b * 5); }
 
     // Panel geometry per orientation. The note never overlaps the panel.
@@ -246,8 +251,10 @@ static void str_init(lv_obj_t *screen) {
         lv_coord_t note_col = (lv_coord_t)(W * 0.38f);
         str_build_panel(note_col, 12, W - note_col - 12, H - 24);
     } else {
-        // Note across the top, strobe panel fills the lower ~62%.
-        lv_coord_t panel_top = (lv_coord_t)(H * 0.36f);
+        // Note across the top; the panel starts below the note (and the optional
+        // cents readout), derived from the real note height so nothing overlaps.
+        lv_coord_t panel_top = NOTE_TOP_MARGIN + NOTE_GLYPH_PX + 8;
+        if (s_show_cents) panel_top += 36;   // room for the cents label below the note
         str_build_panel(12, panel_top, W - 24, H - panel_top - 14);
     }
 
@@ -266,7 +273,7 @@ static void str_init(lv_obj_t *screen) {
     if (is_landscape) {
         lv_obj_align(s_note_img, LV_ALIGN_LEFT_MID, 18, 0);
     } else {
-        lv_obj_align(s_note_img, LV_ALIGN_TOP_MID, 0, 18);
+        lv_obj_align(s_note_img, LV_ALIGN_TOP_MID, 0, NOTE_TOP_MARGIN);
     }
     lv_obj_align_to(s_sharp_img, s_note_img, LV_ALIGN_OUT_RIGHT_MID, -18, 0);
 
@@ -368,14 +375,18 @@ static void str_display_frequency(float frequency,
     lv_obj_set_style_img_recolor(s_note_img, note_col, 0);
     lv_obj_set_style_img_recolor(s_sharp_img, note_col, 0);
 
-    // Optional cents readout.
+    // Optional cents readout — relabel only when the shown value changes.
     if (s_cents_lbl) {
-        if (active) {
-            char buf[12];
-            snprintf(buf, sizeof(buf), "%+0.1f", (double)cents);
-            lv_label_set_text(s_cents_lbl, buf);
-        } else {
-            lv_label_set_text(s_cents_lbl, "--");
+        int q = active ? (int)(cents * 10.0f + (cents >= 0.f ? 0.5f : -0.5f)) : INT_MIN;
+        if (q != s_cents_q) {
+            s_cents_q = q;
+            if (active) {
+                char buf[12];
+                snprintf(buf, sizeof(buf), "%+0.1f", (double)cents);
+                lv_label_set_text(s_cents_lbl, buf);
+            } else {
+                lv_label_set_text(s_cents_lbl, "--");
+            }
         }
         lv_obj_set_style_text_color(s_cents_lbl,
                                     in_tune ? str_accent() : lv_color_hex(0x888888), 0);

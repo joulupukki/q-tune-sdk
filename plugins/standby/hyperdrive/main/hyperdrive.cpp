@@ -9,6 +9,9 @@
  *   - Tap anywhere and the field surges into a warp boost that eases back down.
  *   - Play a note and the stars take on the user's accent colour (and push a
  *     little faster) — so strumming literally drives the ship.
+ *   - Each note struck also launches its letter (the "asteroid") out of the
+ *     vanishing point toward you, fading as it flies — handy as a glanceable
+ *     pitch cue when the pedal is monitoring in buffered-bypass mode.
  *
  * Each star is an lv_line whose two endpoints are recomputed every frame, so the
  * trails get longer toward the edges for a real sense of speed.
@@ -66,6 +69,10 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 #define TIMER_MS  40              // ~25 fps
 #define ACCEL     1.045f          // radial growth per frame (perspective)
 
+#define ASTER_GLYPH  QT_GLYPH_SIZE_MEDIUM   // note-letter artwork for the asteroid
+#define ASTER_PX     100                    // pixel size of ASTER_GLYPH
+#define ASTER_SHARP_DX (ASTER_PX - 18)      // sharp overlay offset (matches the tuners)
+
 typedef struct {
     float a;     // angle (radians) — fixed travel direction
     float ca, sa;
@@ -87,6 +94,14 @@ static float s_maxR = 1.0f;
 static float s_boost = 1.0f;          // eased speed multiplier (>1 = warp)
 static bool  s_playing = false;
 static bool  s_last_playing = false;
+
+// Note-name "asteroid": the struck note's letter flies out toward the viewer.
+static lv_obj_t     *s_aster       = NULL;   // note letter image
+static lv_obj_t     *s_aster_sharp = NULL;   // sharp (#) overlay
+static float         s_aster_r     = 0.f;    // distance from centre
+static float         s_aster_ca = 0.f, s_aster_sa = 0.f;  // travel direction
+static float         s_aster_life  = 0.f;    // 1 -> 0 over its flight; <= 0 = idle
+static TunerNoteName s_aster_note  = NOTE_NONE;
 
 // ---------------------------------------------------------------------------
 static lv_color_t hyp_accent(void) {
@@ -114,6 +129,12 @@ static void hyp_spawn(int i, bool near_centre) {
 static void hyp_tick(lv_timer_t *timer) {
     (void)timer;
     if (!s_star[0]) { return; }
+
+    // Re-read geometry each frame so the field re-centres if the screen rotates.
+    int W = (int)screen_width, H = (int)screen_height;
+    s_cx = W / 2;
+    s_cy = H / 2;
+    s_maxR = sqrtf((float)(s_cx * s_cx + s_cy * s_cy)) + 4.0f;
 
     // Warp boost eases back toward 1.0 (a tap bumps it up). Playing adds a push.
     float rest = s_playing ? 1.35f : 1.0f;
@@ -145,6 +166,23 @@ static void hyp_tick(lv_timer_t *timer) {
             s_color_key[i] = key;
             lv_opa_t dark = (lv_opa_t)(190 - bucket * 45);   // brighter at rim
             lv_obj_set_style_line_color(s_star[i], lv_color_darken(base, dark), LV_PART_MAIN);
+        }
+    }
+
+    // Note-name asteroid: fly the struck note out toward the viewer, fading.
+    if (s_aster && s_aster_life > 0.f) {
+        s_aster_r = s_aster_r * 1.07f + 2.5f;     // accelerate outward
+        s_aster_life -= 0.02f;                    // ~2 s flight at 25 fps
+        int nx = s_cx - ASTER_PX / 2 + (int)(s_aster_ca * s_aster_r);
+        int ny = s_cy - ASTER_PX / 2 + (int)(s_aster_sa * s_aster_r);
+        lv_obj_set_pos(s_aster, nx, ny);
+        lv_obj_set_pos(s_aster_sharp, nx + ASTER_SHARP_DX, ny);
+        lv_opa_t opa = s_aster_life > 0.f ? (lv_opa_t)(s_aster_life * 255.f) : 0;
+        lv_obj_set_style_opa(s_aster, opa, 0);
+        lv_obj_set_style_opa(s_aster_sharp, opa, 0);
+        if (s_aster_life <= 0.f) {
+            lv_obj_add_flag(s_aster, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(s_aster_sharp, LV_OBJ_FLAG_HIDDEN);
         }
     }
 }
@@ -198,6 +236,20 @@ static void hyp_init(lv_obj_t *screen) {
     lv_obj_set_style_text_color(s_hint, lv_color_hex(0x3c424c), 0);
     lv_obj_align(s_hint, LV_ALIGN_BOTTOM_MID, 0, -10);
 
+    // Note-name asteroid (topmost, hidden until a note is struck).
+    s_aster = lv_image_create(screen);
+    lv_image_set_src(s_aster, qt_get_blank_glyph(ASTER_GLYPH));
+    lv_obj_set_style_img_recolor_opa(s_aster, LV_OPA_COVER, 0);
+    lv_obj_add_flag(s_aster, LV_OBJ_FLAG_HIDDEN);
+
+    s_aster_sharp = lv_image_create(screen);
+    lv_image_set_src(s_aster_sharp, qt_get_sharp_glyph(ASTER_GLYPH));
+    lv_obj_set_style_img_recolor_opa(s_aster_sharp, LV_OPA_COVER, 0);
+    lv_obj_add_flag(s_aster_sharp, LV_OBJ_FLAG_HIDDEN);
+
+    s_aster_note = NOTE_NONE;
+    s_aster_life = 0.f;
+
     lv_obj_add_event_cb(screen, hyp_on_touch, LV_EVENT_PRESSED, NULL);
     s_timer = lv_timer_create(hyp_tick, TIMER_MS, NULL);
 }
@@ -205,6 +257,8 @@ static void hyp_init(lv_obj_t *screen) {
 static void hyp_cleanup(void) {
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
     s_bg = NULL; s_hint = NULL;
+    s_aster = NULL; s_aster_sharp = NULL;
+    s_aster_note = NOTE_NONE; s_aster_life = 0.f;
     for (int i = 0; i < NSTARS; i++) { s_star[i] = NULL; }
 }
 
@@ -219,5 +273,35 @@ static void hyp_display_frequency(float frequency,
         // Force a colour refresh on the next tick by clearing the cache.
         for (int i = 0; i < NSTARS; i++) { s_color_key[i] = -1; }
         s_last_playing = s_playing;
+    }
+
+    // Launch the asteroid on a new note (re-arm once the note has been released,
+    // so replaying the same pitch fires again).
+    if (note_name == NOTE_NONE) {
+        s_aster_note = NOTE_NONE;
+    } else if (note_name != s_aster_note && s_aster) {
+        s_aster_note = note_name;
+        lv_image_set_src(s_aster, qt_get_note_glyph(note_name, ASTER_GLYPH));
+        lv_color_t c = hyp_accent();
+        lv_obj_set_style_img_recolor(s_aster, c, 0);
+        lv_obj_remove_flag(s_aster, LV_OBJ_FLAG_HIDDEN);
+        if (qt_note_is_sharp(note_name)) {
+            lv_obj_set_style_img_recolor(s_aster_sharp, c, 0);
+            lv_obj_remove_flag(s_aster_sharp, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_aster_sharp, LV_OBJ_FLAG_HIDDEN);
+        }
+        float ang = (float)(qt_random_u32() % 62832) / 10000.0f;   // 0..2pi
+        s_aster_ca = cosf(ang);
+        s_aster_sa = sinf(ang);
+        s_aster_r  = 8.0f;
+        s_aster_life = 1.0f;
+        // Place at the start point now so it doesn't flash at the previous spot.
+        int nx = s_cx - ASTER_PX / 2 + (int)(s_aster_ca * s_aster_r);
+        int ny = s_cy - ASTER_PX / 2 + (int)(s_aster_sa * s_aster_r);
+        lv_obj_set_pos(s_aster, nx, ny);
+        lv_obj_set_pos(s_aster_sharp, nx + ASTER_SHARP_DX, ny);
+        lv_obj_set_style_opa(s_aster, LV_OPA_COVER, 0);
+        lv_obj_set_style_opa(s_aster_sharp, LV_OPA_COVER, 0);
     }
 }

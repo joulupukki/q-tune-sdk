@@ -12,11 +12,15 @@ into light-trails as they rush past — the classic "jump to hyperspace" effect.
 - **Tap anywhere** and the field surges into a warp boost that eases back down.
 - **Play a note** and the stars take on the user's accent colour (and push a
   little faster) — so strumming literally drives the ship.
+- **Each note struck** also launches its letter out of the vanishing point toward
+  you — an "asteroid" that fades as it flies. With the pedal monitoring in
+  buffered-bypass mode it doubles as a glanceable read of the pitch it's hearing.
 
 Each star is an `lv_line` whose two endpoints are recomputed every frame, so the
 trails get longer toward the edges for a real sense of speed. It is orientation
-aware (240×320 / 320×240): the vanishing point and travel limits come from the
-live screen geometry. It uses one `lv_timer`, deleted in `cleanup()`.
+aware (240×320 / 320×240): the vanishing point and travel limits are re-read from
+the live screen geometry every frame, so the field re-centres if the screen
+rotates. It uses one `lv_timer`, deleted in `cleanup()`.
 
 ## Build
 
