@@ -110,8 +110,8 @@ Once Claude Code finishes, you'll have a built plugin file. Claude Code will tel
 
 Follow the steps in `docs/DEPLOY.md`:
 
-- **Option A (Wi-Fi)**: Connect your pedal to Wi-Fi, open `http://<pedal-ip>/plugins` in a browser, and upload your `.so` file.
-- **Option B (USB)**: Hold the foot switch at power-up to mount the pedal's storage as a USB drive, and drag your `.so` file into the `/plugins` folder.
+- **Option A (USB Drive Mode, recommended)**: Hold the foot switch at power-up to mount the pedal's storage as a USB drive, then drag your `.so` file into the `/plugins` folder. No network setup needed.
+- **Option B (Wi-Fi)**: Connect your pedal to Wi-Fi, open `http://<pedal-ip>/plugins` in a browser, and upload your `.so` file.
 
 ## Step 8: Activate your plugin
 

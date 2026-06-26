@@ -106,8 +106,11 @@ The UI library is **LVGL 9.2**.
    ```
    Do not hand the user a `.so` you haven't validated.
 5. **Tell the user how to install it** (you can't do this step — it's on hardware):
-   upload at `http://<pedal-ip>/plugins`, then restart the pedal and pick the
-   plugin under *Settings → Tuner UI* (or *Standby Screen*). See `docs/DEPLOY.md`.
+   prefer USB Drive Mode (hold the foot switch at power-on to mount the pedal as a
+   USB drive, then copy the `.so` into `/plugins`) — it's quicker and needs no
+   network. Wi-Fi upload at `http://<pedal-ip>/plugins` is the alternative. Then
+   restart the pedal and pick the plugin under *Settings → Tuner UI* (or *Standby
+   Screen*). See `docs/DEPLOY.md`.
 
 ---
 

@@ -48,11 +48,11 @@ cmake --build build --target validate
 
 ## Upload
 
-1. Connect Q-Tune to Wi-Fi (Settings > Wi-Fi).
-2. Open `http://<device-ip>/plugins` in a browser.
-3. Upload `build/bouncer.so`.
-4. Restart the device.
-5. Select "Bouncer" from Settings > Standby Screen.
+1. Put Q-Tune in USB Drive Mode (hold the foot switch at power-on) and copy
+   `build/bouncer.so` into the `/plugins` folder. Or upload it over Wi-Fi at
+   `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
+2. Restart the device.
+3. Select "Bouncer" from Settings > Standby Screen.
 
 ## Plugin identity
 

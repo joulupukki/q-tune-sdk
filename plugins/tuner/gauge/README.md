@@ -71,13 +71,11 @@ rm -rf build && idf.py build
 
 ## Upload
 
-1. Connect Q-Tune to your Wi-Fi (Settings > Wi-Fi on the device).
-2. Open a browser and navigate to `http://<device-ip>/plugins`
-   (the IP address is shown on the Wi-Fi settings screen).
-3. Use the upload form to select `build/gauge.so`.
-4. After upload, restart the device. The firmware loads plugins from
-   `/data/plugins/` at boot.
-5. Select "Gauge" from Settings > Tuner UI on the device.
+1. Put Q-Tune in USB Drive Mode (hold the foot switch at power-on) and copy
+   `build/gauge.so` into the `/plugins` folder. Or upload it over Wi-Fi at
+   `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
+2. Restart the device. The firmware loads plugins from `/data/plugins/` at boot.
+3. Select "Gauge" from Settings > Tuner UI on the device.
 
 ## Plugin identity
 

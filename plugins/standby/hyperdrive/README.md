@@ -34,8 +34,10 @@ Output: `build/hyperdrive.so` (the Docker build runs the validator automatically
 
 ## Upload
 
-1. Connect Q-Tune to Wi-Fi, then open `http://<device-ip>/plugins` in a browser.
-2. Upload `build/hyperdrive.so` and restart the device.
+1. Put Q-Tune in USB Drive Mode (hold the foot switch at power-on) and copy
+   `build/hyperdrive.so` into the `/plugins` folder. Or upload it over Wi-Fi at
+   `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
+2. Restart the device.
 3. Select "Hyperdrive" from Settings > Standby Screen.
 
 ## Plugin identity
