@@ -24,7 +24,7 @@
  *     while the host reports the signal is muted (show_mute_indicator), drawn in
  *     the user's selected note-name accent colour (qt_get_note_name_palette()).
  *   - The firmware's settings button — which is the Q-Tune logo — placed in the
- *     top-RIGHT corner via align_settings_button(). Tapping it opens settings.
+ *     bottom-RIGHT corner via align_settings_button(). Tapping it opens settings.
  *
  * The reference pitch is intentionally NOT drawn here: the firmware shows its own
  * reference-pitch indicator (bottom-centre) when the tuner loads and when you
@@ -320,10 +320,9 @@ static void et_display_frequency(float frequency,
 }
 
 static void et_align_settings_button(lv_obj_t *btn) {
-    // The host's settings button is the Q-Tune logo. Park it in the top-right
-    // corner — clear of the note (top-centre / left) and the gauge (bottom /
-    // right-centre), and balancing the mute indicator in the top-left.
-    lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, -CORNER_MARGIN, CORNER_MARGIN);
+    // The host's settings button is the Q-Tune logo. Park it in the bottom-right
+    // corner, clear of the mute indicator in the top-left.
+    lv_obj_align(btn, LV_ALIGN_BOTTOM_RIGHT, -CORNER_MARGIN, -CORNER_MARGIN);
 }
 
 static void et_cleanup(void) {

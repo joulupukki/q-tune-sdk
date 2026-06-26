@@ -17,8 +17,8 @@ together with the host API accessors (`qt_get_note_glyph`, `qt_get_mute_glyph`,
 - A **mute indicator** in the top-left corner, shown only while the signal is
   muted, in the user's selected note-name accent colour
   (`qt_get_note_name_palette()`).
-- The **Q-Tune logo settings button** (provided by the firmware) in the top-right
-  corner — tap it to open settings.
+- The **Q-Tune logo settings button** (provided by the firmware) in the
+  bottom-right corner — tap it to open settings.
 
 It deliberately does **not** draw a reference-pitch readout: the firmware shows
 its own reference-pitch indicator (bottom-centre) when the tuner loads and when
