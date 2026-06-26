@@ -23,7 +23,7 @@ without being asked, and without asking the user about them:**
 - **Both orientations** — portrait (240×320) *and* landscape (320×240). Never ship
   a UI that only works one way.
 - **(Tuner) the full chrome** — the pitch readout (note + cents), the mute
-  indicator, and the Q-Tune logo settings button, positioned like `example_tuner`
+  indicator, and the Q-Tune logo settings button, positioned like `gauge`
   (mute top-left, settings button bottom-right, clear of each other).
 - **A responsive feel** — a fast `display_frequency()`, cached state, no per-frame
   object creation. Never sluggish or twitchy.
@@ -62,37 +62,40 @@ The UI library is **LVGL 9.2**.
 ## The golden path (do this every time)
 
 1. **Scaffold a uniquely-named project** with the tool — never hand-copy.
-   Always scaffold into the repo's `plugins/` directory (`--dest plugins`):
+   The tool drops the project into the repo's `plugins/<type>/` directory by
+   default (a `tuner` lands in `plugins/tuner/`, a `standby` in `plugins/standby/`):
    ```sh
-   python3 tools/new_plugin.py --name "Glow Needle" --type tuner --dest plugins
+   python3 tools/new_plugin.py --name "Glow Needle" --type tuner
    ```
-   This creates a new project folder with a **unique function prefix, a stable
-   auto-generated uid (the plugin's identity), and a unique build tag** already
-   filled in. Doing this by hand is the #1 source of collisions — always use the
-   tool. `plugins/` is the **standard home for every plugin you build**: it's
-   gitignored, so the user's work stays separate from the SDK and survives a
-   `git pull` to update the SDK. (`--dest` already defaults to the SDK's
-   `plugins/` folder, so even bare `new_plugin.py` lands there — but pass it
-   explicitly to be unambiguous.)
+   This creates a new project folder (here `plugins/tuner/glow_needle`) with a
+   **unique function prefix, a stable auto-generated uid (the plugin's identity),
+   and a unique build tag** already filled in. Doing this by hand is the #1 source
+   of collisions — always use the tool. `plugins/<type>/` is the **standard home
+   for every plugin you build**, sitting alongside the bundled samples: your
+   project there is gitignored, so the user's work stays separate from the SDK and
+   survives a `git pull` to update the SDK. (The bundled samples that ship with the
+   SDK — `plugins/tuner/gauge`, `plugins/tuner/strobe`, `plugins/standby/bouncer`,
+   `plugins/standby/hyperdrive` — are the exceptions that *are* tracked.)
 2. **Write the UI** by editing the project's `main/<name>.cpp` — implement the
-   interface callbacks (see "The two interfaces" below). Reuse patterns from
-   `examples/example_tuner` and `examples/example_standby`.
+   interface callbacks (see "The two interfaces" below). Reuse patterns from the
+   bundled samples: `plugins/tuner/gauge` and `plugins/standby/bouncer` (and the
+   flashier `plugins/tuner/strobe` / `plugins/standby/hyperdrive`).
 3. **Build** (Docker, no local toolchain needed):
    ```sh
-   ./docker-build.sh plugins/glow_needle           # macOS / Linux
+   ./docker-build.sh plugins/tuner/glow_needle     # macOS / Linux
    ```
    ```powershell
-   .\docker-build.ps1 plugins\glow_needle           # Windows (PowerShell)
+   .\docker-build.ps1 plugins\tuner\glow_needle     # Windows (PowerShell)
    ```
-   Produces `plugins/glow_needle/build/<name>.so`. The build **runs the validator
-   automatically** at the end (inside the container, which ships `pyelftools`), so
-   a green build is already a validated `.so`. Read that output — if it reports an
-   unexported symbol or version problem, fix it and rebuild.
+   Produces `plugins/tuner/glow_needle/build/<name>.so`. The build **runs the
+   validator automatically** at the end (inside the container, which ships
+   `pyelftools`), so a green build is already a validated `.so`. Read that output —
+   if it reports an unexported symbol or version problem, fix it and rebuild.
 4. **Validate** — the build does this for you, but you can also run it standalone
    (e.g. to re-check a `.so` without rebuilding):
    ```sh
-   python3 tools/validate_plugin.py plugins/glow_needle/build/<name>.so   # macOS / Linux
-   python  tools/validate_plugin.py plugins/glow_needle/build/<name>.so   # Windows
+   python3 tools/validate_plugin.py plugins/tuner/glow_needle/build/<name>.so   # macOS / Linux
+   python  tools/validate_plugin.py plugins/tuner/glow_needle/build/<name>.so   # Windows
    ```
    The standalone validator needs Python's `pyelftools`. It ships with ESP-IDF; if
    you only have Docker and the command above reports it missing, run it inside the
@@ -156,6 +159,14 @@ fails to load (often silently) or crashes the pedal.
 11. **Do not call `lv_obj_del()` on children of the `screen`** you were given. The
     host clears the screen for you after `cleanup()`. Only delete objects you
     parented somewhere other than `screen` (rare).
+12. **Don't touch the version pins — they are the ABI contract.** The scaffold pins
+    the plugin's ABI version, LVGL (`==9.2.2`), and ESP-IDF (v5.3.2) to match the
+    firmware. The loader rejects a plugin whose ABI *major* differs or whose LVGL
+    *major.minor* differs from the firmware's. Build against this SDK's headers
+    unchanged. If a user reports the pedal refuses the plugin with a version
+    mismatch, their firmware and this SDK checkout are out of sync — point them to
+    [`COMPATIBILITY.md`](COMPATIBILITY.md) (don't try to "fix" it by editing the
+    pins).
 
 ---
 
@@ -180,7 +191,7 @@ is still a failure. Apply all of these to every plugin:
    A twitchy, sluggish tuner is the most common quality failure.
 3. **(Tuner) draw the full readout and place the chrome correctly** — the note +
    cents readout, the mute indicator, and the host's settings button. See
-   "Tuner chrome" below; follow `example_tuner` exactly.
+   "Tuner chrome" below; follow `gauge` exactly.
 4. **Respect the user's live settings** — accent color
    (`qt_get_note_name_palette()`), in-tune width (`qt_get_in_tune_cents_width()`),
    show-cents (`qt_get_show_cents()`), and reference pitch
@@ -210,7 +221,7 @@ void         cleanup(void);                // delete timers/anims; null pointers
 #### Tuner chrome: the readout, the mute indicator, and the settings button
 
 Every tuner has three required pieces of "chrome." Users expect them to look and
-behave like the built-in tuners, so **follow `example_tuner` exactly** here:
+behave like the built-in tuners, so **follow `gauge` exactly** here:
 
 - **The note + cents readout** — the heart of the tuner. Show the detected note
   (the glyph helpers `qt_get_note_glyph()` / `qt_get_sharp_glyph()`, or your own
@@ -284,7 +295,7 @@ wants.
 - **Screen geometry & both orientations**: globals `screen_width`, `screen_height`,
   `is_landscape` — read these instead of hard-coding 240/320. Supporting both
   portrait (240×320) and landscape (320×240) is mandatory; see Design rule 1.
-  `example_tuner` shows branching on `is_landscape` in `init()`; `example_standby`
+  `gauge` shows branching on `is_landscape` in `init()`; `bouncer`
   shows re-reading the globals each frame so animations refill a rotated screen.
 - **Time**: `qt_uptime_ms()` — monotonic milliseconds since boot, for animation
   and elapsed-time logic ("how long has this note been held?").
@@ -321,7 +332,7 @@ lv_obj_add_event_cb(screen, on_tap, LV_EVENT_PRESSED, NULL);
 ```
 
 Use `LV_EVENT_PRESSED` for a touch-down, `LV_EVENT_CLICKED` for a tap-release.
-`example_standby` demonstrates a touch-reactive behavior end to end.
+`bouncer` demonstrates a touch-reactive behavior end to end.
 
 ---
 
@@ -341,6 +352,9 @@ results and fixes:
 | Plugin loads but pedal crashes when leaving the screen | Timer not deleted | `lv_timer_delete(...)` in `cleanup()` |
 | Colors look wrong | Color depth mismatch | Ensure `CONFIG_LV_COLOR_DEPTH=16` |
 
+Every validator/loader message maps to a fix above; for anything not listed here,
+see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+
 You cannot test rendering yourself (no emulator) — the user runs it on hardware.
 So make the build clean and the validation green, and give them a short
 "what you should see" description plus the install steps from `docs/DEPLOY.md`.
@@ -349,14 +363,16 @@ So make the build clean and the validation green, and give them a short
 
 ## Reference material in this repo
 
-- `examples/example_tuner/` and `examples/example_standby/` — complete, working,
-  landscape-aware plugins. **Read these first**; copy their patterns.
+- `plugins/tuner/gauge/` and `plugins/standby/bouncer/` — complete, working,
+  landscape-aware plugins. **Read these first**; copy their patterns. (Two more
+  bundled samples: `plugins/tuner/strobe` and `plugins/standby/hyperdrive`.)
 - `template/` — minimal skeletons to start from (the scaffold uses these).
 - `docs/ALLOWED_SYMBOLS.md` — the authoritative allowed-call list.
 - `docs/GETTING_STARTED.md` — the human walkthrough (point non-coders here).
 - `docs/DEPLOY.md` — upload/restart/select on the pedal.
 - `docs/TROUBLESHOOTING.md` — expanded error→fix reference.
-- `README.md` — the full technical reference (descriptor contract, lifecycle).
+- `docs/REFERENCE.md` — the full technical reference (descriptor contract, ABI and
+  version rules, allowed API, lifecycle). `README.md` is just the landing page/router.
 
 When you finish a plugin, summarize for the user: what it does, the file you built,
 that it passed validation, and the exact steps to install it on their pedal.

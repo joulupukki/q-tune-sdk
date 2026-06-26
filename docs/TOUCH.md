@@ -167,9 +167,9 @@ static void on_button_tap(lv_event_t *e) {
 }
 ```
 
-## Example: standby_example demonstrates touch
+## Example: the bouncer sample demonstrates touch
 
-The `examples/example_standby` project implements touch interactivity end-to-end. It's a bouncing dot that changes color when tapped. Refer to its source code for a complete, working reference.
+The `plugins/standby/bouncer` project implements touch interactivity end-to-end. It's a bouncing dot that changes color when tapped. Refer to its source code for a complete, working reference.
 
 ## Unregistering a callback
 

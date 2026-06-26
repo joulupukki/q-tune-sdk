@@ -7,8 +7,8 @@ pedal. Here's how to get involved depending on what you want to do.
 ## I'm building a plugin
 
 You don't need to contribute to this repo at all — just use it. See
-[`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) and the
-[`examples/`](examples/). Plugins you build are yours: the SDK is Apache-2.0 and
+[`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) and the bundled samples in
+[`plugins/`](plugins/). Plugins you build are yours: the SDK is Apache-2.0 and
 you're free to share or sell what you make (see [FAQ](docs/FAQ.md)).
 
 ## I found a bug or have a question
@@ -39,8 +39,9 @@ Improvements to the build tooling, docs, examples, and templates are welcome.
   commit CRLF in shell scripts, Python, CMake, or sources (PowerShell `.ps1` files
   are the one exception and use CRLF).
 - **Test what you touch.** If you change a build script or the validator, build
-  both examples (`./docker-build.sh examples/example_tuner` and
-  `examples/example_standby`) and confirm the auto-validation passes.
+  the bundled samples (e.g. `./docker-build.sh plugins/tuner/gauge` and
+  `./docker-build.sh plugins/standby/bouncer`) and confirm the auto-validation
+  passes.
 - **Match the surrounding style.** Plain language in docs; keep example plugins
   idiomatic and landscape-aware (lay out relative to `screen_width` /
   `screen_height`, never hard-coded 240/320).

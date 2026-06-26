@@ -48,8 +48,12 @@ plugins as relocatable `.so` modules the firmware loads at boot.
 - `.gitattributes` normalizes line endings (LF) so a Windows checkout can't
   corrupt the build scripts.
 
-### Docs & examples
+### Docs & sample plugins
 - `CLAUDE.md` for AI-assisted plugin authoring with Claude Code.
-- `examples/example_tuner` and `examples/example_standby` (touch-enabled).
+- Bundled sample projects under `plugins/`, organized by type: tuners
+  `plugins/tuner/gauge` (needle gauge) and `plugins/tuner/strobe` (strobe);
+  standby screens `plugins/standby/bouncer` (bouncing dot, touch-enabled) and
+  `plugins/standby/hyperdrive` (warp starfield). `new_plugin.py` scaffolds your
+  own projects alongside them in `plugins/<type>/` (gitignored).
 - `template/tuner` and `template/standby` starter skeletons.
 - Guides: Getting Started, Deploy, Touch, Troubleshooting; full README reference.

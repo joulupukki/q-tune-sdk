@@ -28,7 +28,7 @@
 //   - lv_obj_clear_flag is a compat macro; call lv_obj_remove_flag() directly.
 //   - lv_timer_del is a compat macro; call lv_timer_delete() directly.
 //   - lv_img_* LVGL 8 compat macros have no ELF symbols; use lv_image_*.
-// See the SDK README.md and include/README.md for the full export list.
+// See docs/ALLOWED_SYMBOLS.md (and include/README.md) for the full export list.
 
 // NOTE ON lv_conf.h
 // -----------------

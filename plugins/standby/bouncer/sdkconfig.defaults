@@ -1,7 +1,7 @@
-# sdkconfig.defaults — example_standby plugin
+# sdkconfig.defaults — bouncer plugin
 #
 # Mirrors the firmware's LVGL configuration so that struct layouts match.
-# See example_tuner/sdkconfig.defaults for full commentary.
+# See plugins/tuner/gauge/sdkconfig.defaults for full commentary.
 
 # --- Color depth: 16-bit RGB565 — MANDATORY, must match firmware ----------
 CONFIG_LV_COLOR_DEPTH_16=y

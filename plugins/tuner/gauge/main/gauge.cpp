@@ -2,7 +2,7 @@
 // Copyright 2026 Boyd Timothy
 
 /**
- * example_tuner.cpp
+ * gauge.cpp
  *
  * Minimal Q-Tune tuner plugin demonstrating the TunerGUIInterface contract.
  *
@@ -10,7 +10,7 @@
  * and the gauge are placed on opposite ends so they never overlap:
  *   - Portrait (240x320):  note across the TOP,  gauge anchored to the BOTTOM.
  *   - Landscape (320x240): note down the LEFT,   gauge anchored to the RIGHT.
- * is_landscape (a host global) selects the arrangement at init; et_scale_size()
+ * is_landscape (a host global) selects the arrangement at init; ga_scale_size()
  * keeps the gauge sized to the shorter edge so it always fits.
  *
  * Elements:
@@ -33,7 +33,7 @@
  * The note/mute glyphs live in firmware flash; the plugin references them through
  * the host accessors rather than embedding its own image assets.
  *
- * Build output: example_tuner.so  (see CMakeLists.txt / qtune_project_so()).
+ * Build output: gauge.so  (see CMakeLists.txt / qtune_project_so()).
  * Upload via the /plugins page served over Wi-Fi; the firmware loads plugins
  * from /data/plugins at boot.
  *
@@ -48,7 +48,7 @@
  * (main/plugins/qtune_plugin_symbols.txt). A call to a non-exported symbol links
  * fine (undefined symbols are allowed in the .so) but FAILS to resolve at load
  * time, so the plugin will be rejected. Validate with:
- *     xtensa-esp32s3-elf-nm -u build/example_tuner.so
+ *     xtensa-esp32s3-elf-nm -u build/gauge.so
  * and confirm every undefined symbol is in the export table or provided by the
  * loader's libc/ESP-IDF tables.
  */
@@ -61,28 +61,28 @@
 // ---------------------------------------------------------------------------
 // Forward declarations
 // ---------------------------------------------------------------------------
-static const char  *et_get_name(void);
-static TuningUIType et_get_type(void);
-static void         et_init(lv_obj_t *screen);
-static void         et_display_frequency(float frequency,
+static const char  *ga_get_name(void);
+static TuningUIType ga_get_type(void);
+static void         ga_init(lv_obj_t *screen);
+static void         ga_display_frequency(float frequency,
                                           float target_frequency,
                                           TunerNoteName note_name,
                                           int octave,
                                           float cents,
                                           bool show_mute_indicator);
-static void         et_align_settings_button(lv_obj_t *btn);
-static void         et_cleanup(void);
+static void         ga_align_settings_button(lv_obj_t *btn);
+static void         ga_cleanup(void);
 
 // ---------------------------------------------------------------------------
 // Interface struct
 // ---------------------------------------------------------------------------
-static TunerGUIInterface et_interface = {
-    .get_name              = et_get_name,
-    .get_type              = et_get_type,
-    .init                  = et_init,
-    .display_frequency     = et_display_frequency,
-    .align_settings_button = et_align_settings_button,
-    .cleanup               = et_cleanup,
+static TunerGUIInterface ga_interface = {
+    .get_name              = ga_get_name,
+    .get_type              = ga_get_type,
+    .init                  = ga_init,
+    .display_frequency     = ga_display_frequency,
+    .align_settings_button = ga_align_settings_button,
+    .cleanup               = ga_cleanup,
 };
 
 // ---------------------------------------------------------------------------
@@ -95,11 +95,11 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .abi_version  = QTUNE_PLUGIN_ABI_VERSION,
     .lvgl_version = QTUNE_LVGL_VERSION,
     .type         = QTUNE_PLUGIN_TUNER,
-    .sdk_build    = "example-sdk-1.0",
-    .interface    = &et_interface,
+    .sdk_build    = "gauge-1.0",
+    .interface    = &ga_interface,
     // Stable identity. The firmware assigns the numeric slot dynamically at load;
     // the uid is what persists the user's selection — never change it once shipped.
-    .uid          = "qtune.example-tuner.0001",
+    .uid          = "qtune.gauge.0001",
 };
 
 // Entry function the firmware calls at load time. Required: the ELF loader's
@@ -137,7 +137,7 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 // sharp overlay is the same size and aligns to the letter's right edge.
 #define NOTE_GLYPH_SIZE    QT_GLYPH_SIZE_MEDIUM
 
-// Module-level state — set in et_init(), nulled in et_cleanup().
+// Module-level state — set in ga_init(), nulled in ga_cleanup().
 static lv_obj_t *s_screen     = NULL;
 static lv_obj_t *s_note_img   = NULL;  // letter glyph (A-G / blank)
 static lv_obj_t *s_sharp_img  = NULL;  // sharp (#) overlay, hidden for naturals
@@ -156,9 +156,9 @@ static bool          s_last_muted   = false;
 // ---------------------------------------------------------------------------
 
 // Gauge diameter, based on the SHORTER screen edge so the circle always fits
-// regardless of orientation. Used in both et_init() and et_display_frequency()
+// regardless of orientation. Used in both ga_init() and ga_display_frequency()
 // so the needle length stays in sync with the widget size.
-static lv_coord_t et_scale_size(void) {
+static lv_coord_t ga_scale_size(void) {
     lv_coord_t base = (screen_width < screen_height) ? screen_width : screen_height;
     int pct = is_landscape ? SCALE_SIZE_PCT_LANDSCAPE : SCALE_SIZE_PCT_PORTRAIT;
     return (lv_coord_t)((base * pct) / 100);
@@ -166,21 +166,21 @@ static lv_coord_t et_scale_size(void) {
 
 // The user's selected note-name accent colour (Amber if they've not picked one).
 // Used for the in-tune highlight, the mute indicator, and the reference readout.
-static lv_color_t et_accent_color(void) {
+static lv_color_t ga_accent_color(void) {
     lv_palette_t palette = qt_get_note_name_palette();
     return (palette == LV_PALETTE_NONE) ? lv_palette_main(LV_PALETTE_AMBER)
                                         : lv_palette_main(palette);
 }
 
-static const char *et_get_name(void) {
-    return "Example";
+static const char *ga_get_name(void) {
+    return "Gauge";
 }
 
-static TuningUIType et_get_type(void) {
+static TuningUIType ga_get_type(void) {
     return TuningUITypeStandard;
 }
 
-static void et_init(lv_obj_t *screen) {
+static void ga_init(lv_obj_t *screen) {
     s_screen = screen;
 
     // Reset cached state so the first display_frequency call does a full draw.
@@ -217,13 +217,13 @@ static void et_init(lv_obj_t *screen) {
     s_mute_img = lv_image_create(screen);
     lv_image_set_src(s_mute_img, qt_get_mute_glyph());
     lv_obj_set_style_img_recolor_opa(s_mute_img, LV_OPA_COVER, 0);
-    lv_obj_set_style_img_recolor(s_mute_img, et_accent_color(), 0);
+    lv_obj_set_style_img_recolor(s_mute_img, ga_accent_color(), 0);
     lv_obj_align(s_mute_img, LV_ALIGN_TOP_LEFT, CORNER_MARGIN, CORNER_MARGIN);
     lv_obj_add_flag(s_mute_img, LV_OBJ_FLAG_HIDDEN);
 
     // Cents scale — round needle gauge, opposite the note: bottom edge in
     // portrait, right edge in landscape.
-    lv_coord_t scale_size = et_scale_size();
+    lv_coord_t scale_size = ga_scale_size();
 
     s_scale = lv_scale_create(screen);
     lv_obj_set_size(s_scale, scale_size, scale_size);
@@ -260,7 +260,7 @@ static void et_init(lv_obj_t *screen) {
                                    0);               // initial value
 }
 
-static void et_display_frequency(float frequency,
+static void ga_display_frequency(float frequency,
                                   float target_frequency,
                                   TunerNoteName note_name,
                                   int octave,
@@ -301,7 +301,7 @@ static void et_display_frequency(float frequency,
         if (scaled < SCALE_RANGE_MIN) scaled = SCALE_RANGE_MIN;
         if (scaled > SCALE_RANGE_MAX) scaled = SCALE_RANGE_MAX;
 
-        lv_scale_set_line_needle_value(s_scale, s_needle, et_scale_size() / 2, scaled);
+        lv_scale_set_line_needle_value(s_scale, s_needle, ga_scale_size() / 2, scaled);
         s_last_cents = cents;
     }
 
@@ -310,7 +310,7 @@ static void et_display_frequency(float frequency,
                    (fabsf(cents) <= (float)qt_get_in_tune_cents_width());
 
     if (in_tune != s_last_in_tune) {
-        lv_color_t indicator_color = in_tune ? et_accent_color() : lv_color_white();
+        lv_color_t indicator_color = in_tune ? ga_accent_color() : lv_color_white();
 
         lv_obj_set_style_line_color(s_needle, indicator_color, LV_PART_MAIN);
         lv_obj_set_style_img_recolor(s_note_img, indicator_color, 0);
@@ -319,13 +319,13 @@ static void et_display_frequency(float frequency,
     }
 }
 
-static void et_align_settings_button(lv_obj_t *btn) {
+static void ga_align_settings_button(lv_obj_t *btn) {
     // The host's settings button is the Q-Tune logo. Park it in the bottom-right
     // corner, clear of the mute indicator in the top-left.
     lv_obj_align(btn, LV_ALIGN_BOTTOM_RIGHT, -CORNER_MARGIN, -CORNER_MARGIN);
 }
 
-static void et_cleanup(void) {
+static void ga_cleanup(void) {
     // The host deletes all children of `screen` after cleanup(); we only null
     // our pointers. This example creates no timers/animations to tear down.
     s_screen     = NULL;

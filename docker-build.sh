@@ -9,8 +9,8 @@
 #   ./docker-build.sh [plugin-project-dir]   # default: current directory
 #
 # Examples:
-#   ./docker-build.sh examples/example_tuner
-#   cd examples/example_standby && ../../docker-build.sh
+#   ./docker-build.sh plugins/tuner/gauge
+#   cd plugins/standby/bouncer && ../../../docker-build.sh
 #
 # How the SDK is found inside the container: the SDK and the project are mounted
 # at FIXED container paths (/qtune-sdk and /project), and QTUNE_SDK_DIR is

@@ -5,8 +5,8 @@
  * stub_app.c
  *
  * Stub entry point for the (unused) normal ESP-IDF application image. The real
- * deliverable is example_standby.so, produced by qtune_project_so() in the
- * top-level CMakeLists.txt. The plugin source (example_standby.cpp) is NOT
+ * deliverable is bouncer.so, produced by qtune_project_so() in the
+ * top-level CMakeLists.txt. The plugin source (bouncer.cpp) is NOT
  * registered with this component — it references host firmware symbols that are
  * undefined in a standalone app link and are resolved at load time inside the
  * firmware. qtune_project_so() globs this directory to build the .so.

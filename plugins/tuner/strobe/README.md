@@ -1,0 +1,51 @@
+# strobe — Q-Tune Tuner Plugin Sample
+
+This project builds `strobe.so`, a tuner UI plugin for Q-Tune in the style of a
+classic mechanical / Peterson-type **strobe** tuner. It's one of the bundled
+tuner samples (alongside [`gauge`](../gauge)) — copy it and build on it.
+
+## What it looks like
+
+Instead of a needle, the display shows several horizontal bands of vertical
+stripes that appear to scroll:
+
+- **Flat** (cents < 0): the stripes drift to the **left**.
+- **Sharp** (cents > 0): the stripes drift to the **right**.
+- The further out of tune, the **faster** they move (a blur when way off).
+- **Dead in tune**: the pattern **freezes** and snaps to the user's accent colour.
+
+Each band scrolls at a slightly different rate (like the octave rows on a real
+strobe), so a locked note produces a clear "everything stops at once" read.
+While searching, the stripes are a calm neutral grey; the instant the note is
+inside the in-tune window they turn the user's chosen accent colour and stop —
+so "grey + moving = keep tuning", "colour + frozen = locked".
+
+The layout is orientation-aware: portrait stacks the note above the strobe panel;
+landscape puts the note on the left and the panel on the right. All geometry is
+computed from the live `screen_width` / `screen_height` / `is_landscape` host
+globals.
+
+## Build
+
+From the SDK repo root (Docker, no local ESP-IDF needed):
+
+```sh
+./docker-build.sh plugins/tuner/strobe
+```
+
+Output: `build/strobe.so` (the Docker build runs the validator automatically).
+
+## Upload
+
+1. Connect Q-Tune to Wi-Fi, then open `http://<device-ip>/plugins` in a browser.
+2. Upload `build/strobe.so` and restart the device.
+3. Select "Q Strobe" from Settings > Tuner UI.
+
+## Plugin identity
+
+The descriptor's `uid` is `"qtune.strobe.gdam5c"` — the plugin's stable identity.
+The firmware assigns the numeric menu slot dynamically at load. Never change a
+`uid` after publishing or the user's saved selection is lost.
+
+Everything this plugin calls is listed in
+[`docs/ALLOWED_SYMBOLS.md`](../../../docs/ALLOWED_SYMBOLS.md).

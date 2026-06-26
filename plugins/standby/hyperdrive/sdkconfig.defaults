@@ -1,0 +1,26 @@
+# sdkconfig.defaults — Hyperdrive standby plugin
+#
+# Mirrors the firmware's LVGL configuration so the compiled .so shares struct
+# layouts with the firmware. DO NOT change CONFIG_LV_COLOR_DEPTH.
+
+# --- Color depth: 16-bit RGB565 — MANDATORY, must match firmware ----------
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_COLOR_DEPTH=16
+
+# --- OS integration: FreeRTOS ---------------------------------------------
+CONFIG_LV_OS_FREERTOS=y
+CONFIG_LV_USE_OS=2
+
+# --- Memory management ----------------------------------------------------
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_BUILTIN_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+
+# --- Widgets / fonts used by this plugin ----------------------------------
+CONFIG_LV_USE_LABEL=y
+CONFIG_LV_USE_LINE=y
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_DEFAULT_MONTSERRAT_14=y
+
+# --- Shared object support (required) -------------------------------------
+CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=y

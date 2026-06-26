@@ -1,4 +1,4 @@
-<!-- The current-row values are stamped by tools/sync_sdk.py at release time. -->
+<!-- Maintainer note: update the version row below at each SDK release. -->
 
 # Compatibility Matrix
 

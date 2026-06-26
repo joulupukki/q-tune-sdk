@@ -107,7 +107,8 @@ static void @PREFIX@_init(lv_obj_t *screen) {
     lv_obj_align(s_cents_label, LV_ALIGN_CENTER, 0, 90);
 
     // TODO: make it yours. Ideas: a needle gauge (lv_scale), an arc, a moving
-    // bar, an animated background. See examples/example_tuner for a gauge.
+    // bar, an animated background. See plugins/tuner/gauge for a needle gauge,
+    // or plugins/tuner/strobe for a strobe display.
 }
 
 // Called ~30x/second with the latest pitch. Keep it fast.

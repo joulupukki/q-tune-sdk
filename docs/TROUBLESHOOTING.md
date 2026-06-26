@@ -132,7 +132,7 @@ static void on_tap(lv_event_t *e) {
 **Fix**:
 
 1. Cache the previous values. Only update LVGL objects if the value changed significantly.
-2. See `examples/example_tuner` for the caching pattern.
+2. See `plugins/tuner/gauge` for the caching pattern.
 3. Avoid expensive operations in `display_frequency()` (don't call `malloc`, don't iterate over large data structures).
 
 ### Display doesn't update when I change a user setting (e.g., reference frequency)
@@ -149,7 +149,7 @@ static void on_tap(lv_event_t *e) {
 
 1. Ensure you call `lv_timer_delete()` for every timer you created.
 2. Do NOT call `lv_obj_del()` on children of the `screen` you were given — the host cleans them up for you.
-3. See "Timer lifecycle" in `examples/example_standby/README.md`.
+3. See "Timer lifecycle" in `plugins/standby/bouncer/README.md`.
 
 ### Re-enabling crash-disabled plugins
 
@@ -281,7 +281,7 @@ lv_obj_set_style_bg_color(obj, accent, 0);
 - **Validator errors**: Read the error message carefully; it usually says exactly which symbol is missing. Check `docs/ALLOWED_SYMBOLS.md`.
 - **Build failures**: Look at the compiler output. Search the error message in the README or this document.
 - **Runtime crashes**: Check the serial monitor for a stack trace (see "Debugging with serial output" above). Use Safe Mode to recover.
-- **Still stuck**: See `README.md` for the full technical reference, or check `examples/example_tuner` / `examples/example_standby` for working implementations.
+- **Still stuck**: See `docs/REFERENCE.md` for the full technical reference, or check `plugins/tuner/gauge` / `plugins/standby/bouncer` for working implementations.
 
 ## Quick recovery checklist
 

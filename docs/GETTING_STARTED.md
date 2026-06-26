@@ -1,6 +1,8 @@
 # Getting Started: Build Your First Q-Tune Plugin
 
-This guide walks you through building a custom UI plugin for the Q-Tune guitar-tuner pedal without writing code yourself. You'll describe what you want in plain English, let Claude Code do the heavy lifting, and end up with a `.so` file ready to load on your pedal.
+This guide walks you through building a custom UI plugin for the Q-Tune guitar-tuner pedal without writing code yourself. You'll describe what you want in plain English, let Claude Code handle the code, build, and validation, and end up with a `.so` file ready to load on your pedal.
+
+**What's a plugin?** It's a custom screen for your pedal — either a **tuner** (the display you see *while* tuning, like a needle or a strobe) or a **standby** screen (what shows when the pedal is idle). You're not stuck with the built-in looks; you can make your own. The SDK ships four working examples — a needle gauge, a strobe, a bouncing dot, and a warp-speed starfield — that you (or Claude Code) can copy and tweak into whatever you imagine. New to the jargon? The [glossary](GLOSSARY.md) defines every term in one place.
 
 ## What you'll need
 
@@ -8,16 +10,18 @@ This guide walks you through building a custom UI plugin for the Q-Tune guitar-t
 - **The Q-Tune SDK** — clone or download this repository.
 - **Claude Code** (or any text editor and a terminal, but Claude Code is much easier for non-programmers).
 
+> Already have ESP-IDF v5.3.2 installed and prefer not to use Docker? You can build natively instead — see [the native-install option in the reference](REFERENCE.md#2-prerequisites). Docker is the recommended path for everyone else.
+
 ## The big picture
 
 Your plugin will:
 
-1. **Get scaffolded** — a tool generates a uniquely-named project folder with all the boilerplate in place.
-2. **Get coded** — Claude Code writes or edits the C++ file based on your description.
-3. **Get built** — Docker compiles it to a `.so` shared object.
-4. **Get validated** — a Python script checks for common mistakes before upload.
-5. **Get uploaded** — you copy it to your pedal via Wi-Fi or USB.
-6. **Get selected** — you pick it in the pedal's settings menu.
+1. **Scaffold** — a tool generates a uniquely-named project folder with all the boilerplate in place.
+2. **Code** — Claude Code writes or edits the C++ file based on your description.
+3. **Build** — Docker compiles it to a `.so` shared object.
+4. **Validate** — a Python script checks for common mistakes before upload.
+5. **Upload** — you copy it to your pedal via Wi-Fi or USB.
+6. **Select** — you pick it in the pedal's settings menu.
 
 ## Step 1: Install Docker
 
@@ -27,7 +31,9 @@ If you don't have Docker yet, [follow the official installation guide](https://d
 
 ## Step 2: Get the SDK
 
-Clone the Q-Tune SDK repository or download it as a ZIP. Open a terminal in the SDK folder:
+Clone the Q-Tune SDK repository, or download the latest release ZIP from the
+[releases page](https://github.com/joulupukki/q-tune-sdk/releases/latest) and
+unzip it. Open a terminal in the SDK folder:
 
 ```sh
 cd /path/to/q-tune-sdk
@@ -45,9 +51,9 @@ Before you start, think about:
   - You can build one or both, but each is a separate plugin.
 
 - **What should it look like?** Be specific but friendly.
-  - ✓ "A big glowing needle with the note name in the middle"
-  - ✓ "A bouncing colorful ball that reacts to pitch"
-  - ✓ "A simple meter bar with green-to-red when out of tune"
+  - "A big glowing needle with the note name in the middle"
+  - "A bouncing colorful ball that reacts to pitch"
+  - "A simple meter bar with green-to-red when out of tune"
 
 ## Step 4: Open the SDK in Claude Code
 
@@ -88,11 +94,11 @@ Please:
 
 Claude Code will:
 
-- Call `python3 tools/new_plugin.py --dest plugins` to create a new project under the `plugins/` folder with a stable auto-generated uid (the plugin's identity), name prefix, and build tag. You don't pick a number — the firmware assigns one dynamically at load time. (`plugins/` is the standard home for your projects; it stays separate from the SDK and survives a `git pull` to update the SDK.)
+- Call `python3 tools/new_plugin.py` to create a new project under the `plugins/<type>/` folder (a tuner lands in `plugins/tuner/`, a standby in `plugins/standby/`) with a stable auto-generated uid (the plugin's identity), name prefix, and build tag. You don't pick a number — the firmware assigns one dynamically at load time. (`plugins/<type>/` is the standard home for your projects, alongside the bundled samples; your work there is gitignored, so it stays separate from the SDK and survives a `git pull` to update the SDK.)
 - Write the C++ source code implementing your tuner or standby interface.
-- Run `./docker-build.sh plugins/<your-project>` to build it. Docker will download the pinned ESP-IDF and LVGL and compile your code.
+- Run `./docker-build.sh plugins/<type>/<your-project>` to build it. Docker will download the pinned ESP-IDF and LVGL and compile your code.
 - Run `python3 tools/validate_plugin.py <path-to-.so>` to check it before declaring success.
-- Show you the path to your `.so` file (usually something like `plugins/my_tuner/build/my_tuner.so`).
+- Show you the path to your `.so` file (usually something like `plugins/tuner/my_tuner/build/my_tuner.so`).
 
 If the build or validation fails, Claude Code will show the error and suggest a fix. Follow the troubleshooting hints in `docs/TROUBLESHOOTING.md` if needed.
 
@@ -133,7 +139,7 @@ If something goes wrong:
 
 - **Want to customize your plugin?** Edit the source file and rebuild. Claude Code can help you tweak colors, layout, behavior, etc.
 - **Want to add touch interactivity?** See `docs/TOUCH.md` for how to respond to taps.
-- **Want to dive deeper?** Read `README.md` (the technical reference), look at `examples/example_tuner` and `examples/example_standby`, and explore `docs/ALLOWED_SYMBOLS.md` for the full list of available LVGL widgets.
+- **Want to go further?** Read `docs/REFERENCE.md` (the technical reference), look at the bundled samples `plugins/tuner/gauge` and `plugins/standby/bouncer` (and `plugins/tuner/strobe` / `plugins/standby/hyperdrive`), and explore `docs/ALLOWED_SYMBOLS.md` for the full list of available LVGL widgets.
 - **Having trouble?** See `docs/TROUBLESHOOTING.md` and `docs/DEPLOY.md`.
 
 ## Quick checklist
@@ -147,5 +153,3 @@ If something goes wrong:
 - [ ] Pedal restarted.
 - [ ] Plugin selected in Settings menu.
 - [ ] Plugin works and looks good.
-
-Happy building!

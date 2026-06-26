@@ -14,7 +14,7 @@
     <plugin-project-dir>\build\.
 
 .EXAMPLE
-    .\docker-build.ps1 examples\example_tuner
+    .\docker-build.ps1 plugins\tuner\gauge
 
 .EXAMPLE
     .\docker-build.ps1            # builds the project in the current directory

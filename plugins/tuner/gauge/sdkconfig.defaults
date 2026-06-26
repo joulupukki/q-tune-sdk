@@ -1,4 +1,4 @@
-# sdkconfig.defaults — example_tuner plugin
+# sdkconfig.defaults — gauge plugin
 #
 # These settings mirror the firmware's LVGL configuration so that the compiled
 # .so shares the same struct layouts and symbol sizes as the firmware binary.

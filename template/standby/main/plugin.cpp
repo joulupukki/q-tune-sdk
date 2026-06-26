@@ -119,7 +119,8 @@ static void @PREFIX@_init(lv_obj_t *screen) {
     s_timer = lv_timer_create(@PREFIX@_tick, TIMER_MS, NULL);
 
     // TODO: make it yours. Ideas: bouncing shapes, particles (qt_random_u32),
-    // a clock (qt_uptime_ms), pitch-reactive colors. See examples/example_standby.
+    // a clock (qt_uptime_ms), pitch-reactive colors. See plugins/standby/bouncer
+    // (a bouncing dot) or plugins/standby/hyperdrive (a warp starfield).
 }
 
 // Called when standby ends. DELETE THE TIMER HERE.

@@ -2,7 +2,7 @@
 // Copyright 2026 Boyd Timothy
 
 /**
- * example_standby.cpp
+ * bouncer.cpp
  *
  * Minimal Q-Tune standby plugin demonstrating the TunerStandbyGUIInterface
  * contract.
@@ -14,15 +14,15 @@
  * reverts to white.
  *
  * Touch: tap anywhere and the dot jumps to your finger and heads off in a new
- * random direction (es_on_touch). This demonstrates the touchscreen input path —
+ * random direction (bo_on_touch). This demonstrates the touchscreen input path —
  * lv_obj_add_event_cb + lv_event_get_indev + lv_indev_get_point — and qt_random_u32().
  *
  * Orientation: works in BOTH portrait (240x320) and landscape (320x240). The
  * bounce walls are recomputed every tick from the live screen_width/screen_height
- * host globals (see es_timer_cb), so the animation fills whatever the current
+ * host globals (see bo_timer_cb), so the animation fills whatever the current
  * orientation is — no portrait-specific assumptions.
  *
- * Build output: example_standby.so  (see CMakeLists.txt / qtune_project_so()).
+ * Build output: bouncer.so  (see CMakeLists.txt / qtune_project_so()).
  * Upload via the /plugins page served over Wi-Fi; the firmware loads it from
  * /data/plugins at boot.
  *
@@ -39,11 +39,11 @@
 // ---------------------------------------------------------------------------
 // Forward declarations
 // ---------------------------------------------------------------------------
-static const char  *es_get_name(void);
-static bool         es_enable_screen(void);
-static void         es_init(lv_obj_t *screen);
-static void         es_cleanup(void);
-static void         es_display_frequency(float frequency,
+static const char  *bo_get_name(void);
+static bool         bo_enable_screen(void);
+static void         bo_init(lv_obj_t *screen);
+static void         bo_cleanup(void);
+static void         bo_display_frequency(float frequency,
                                           float target_frequency,
                                           TunerNoteName note_name,
                                           int octave,
@@ -52,12 +52,12 @@ static void         es_display_frequency(float frequency,
 // ---------------------------------------------------------------------------
 // Interface struct
 // ---------------------------------------------------------------------------
-static TunerStandbyGUIInterface es_interface = {
-    .get_name         = es_get_name,
-    .enable_screen    = es_enable_screen,
-    .init             = es_init,
-    .cleanup          = es_cleanup,
-    .display_frequency = es_display_frequency,
+static TunerStandbyGUIInterface bo_interface = {
+    .get_name         = bo_get_name,
+    .enable_screen    = bo_enable_screen,
+    .init             = bo_init,
+    .cleanup          = bo_cleanup,
+    .display_frequency = bo_display_frequency,
 };
 
 // ---------------------------------------------------------------------------
@@ -69,11 +69,11 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .abi_version  = QTUNE_PLUGIN_ABI_VERSION,
     .lvgl_version = QTUNE_LVGL_VERSION,
     .type         = QTUNE_PLUGIN_STANDBY,
-    .sdk_build    = "example-sdk-1.0",
-    .interface    = &es_interface,
+    .sdk_build    = "bouncer-1.0",
+    .interface    = &bo_interface,
     // Stable identity. The firmware assigns the numeric slot dynamically at load;
     // the uid is what persists the user's selection — never change it once shipped.
-    .uid          = "qtune.example-standby.0001",
+    .uid          = "qtune.bouncer.0001",
 };
 
 // Entry function the firmware calls at load time. Required: the ELF loader's
@@ -108,7 +108,7 @@ static bool s_tinted = false;
 // LVGL lock before calling lv_timer_handler(), so this runs inside the lock; do
 // NOT call lvgl_port_lock() here.
 // ---------------------------------------------------------------------------
-static void es_timer_cb(lv_timer_t *timer) {
+static void bo_timer_cb(lv_timer_t *timer) {
     (void)timer;
     if (!s_dot) { return; }
 
@@ -140,11 +140,11 @@ static void es_timer_cb(lv_timer_t *timer) {
 
 // ---------------------------------------------------------------------------
 // Touch callback — the pedal has a capacitive touchscreen. We register this on
-// the screen in es_init(); on a press we move the dot under the finger and pick
+// the screen in bo_init(); on a press we move the dot under the finger and pick
 // a new random travel direction. lv_event_get_indev()/lv_indev_get_point() read
 // the touch coordinates; both are in the host export table.
 // ---------------------------------------------------------------------------
-static void es_on_touch(lv_event_t *e) {
+static void bo_on_touch(lv_event_t *e) {
     lv_indev_t *indev = lv_event_get_indev(e);
     if (!indev || !s_dot) { return; }
 
@@ -169,17 +169,17 @@ static void es_on_touch(lv_event_t *e) {
 // Interface implementations
 // ---------------------------------------------------------------------------
 
-static const char *es_get_name(void) {
-    return "Example";
+static const char *bo_get_name(void) {
+    return "Bouncer";
 }
 
-static bool es_enable_screen(void) {
+static bool bo_enable_screen(void) {
     // Return true to keep the display on during standby.
     // Return false for a "screen off" standby (like the built-in Blank UI).
     return true;
 }
 
-static void es_init(lv_obj_t *screen) {
+static void bo_init(lv_obj_t *screen) {
     s_x      = DOT_SIZE;
     s_y      = DOT_SIZE;
     s_dx     = DOT_SPEED_X;
@@ -201,14 +201,14 @@ static void es_init(lv_obj_t *screen) {
 
     // The firmware holds the LVGL lock during init/cleanup/display_frequency —
     // do NOT call lvgl_port_lock()/unlock() anywhere in this plugin.
-    s_timer = lv_timer_create(es_timer_cb, TIMER_MS, NULL);
+    s_timer = lv_timer_create(bo_timer_cb, TIMER_MS, NULL);
 
     // React to screen touches: tap to send the dot to your finger. The screen
     // object dispatches touch events to this callback.
-    lv_obj_add_event_cb(screen, es_on_touch, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(screen, bo_on_touch, LV_EVENT_PRESSED, NULL);
 }
 
-static void es_cleanup(void) {
+static void bo_cleanup(void) {
     // Stop and delete the timer BEFORE the host clears the screen, so it can't
     // fire against freed objects.
     if (s_timer) {
@@ -219,7 +219,7 @@ static void es_cleanup(void) {
     s_tinted = false;
 }
 
-static void es_display_frequency(float frequency,
+static void bo_display_frequency(float frequency,
                                   float target_frequency,
                                   TunerNoteName note_name,
                                   int octave,
