@@ -41,6 +41,12 @@ python3 tools/validate_plugin.py build/<your-plugin>.so
 | Plugin validation failed but was uploaded anyway | Visit `http://<pedal-ip>/plugins` and check if the plugin is listed as disabled. See "Crash-disabled plugins" below |
 | Plugin loads but wrong interface type | You built a Tuner but looked in Settings → Standby Screen (or vice versa). Check which kind you implemented |
 
+**Tip:** the serial console prints the exact reason a plugin was skipped (e.g.
+`rejected glow.so: missing symbol qtune_plugin_entry`). Run `./monitor.sh` (macOS/
+Linux) or `.\monitor.ps1` (Windows) and power-cycle the pedal to watch the plugin
+scan as it boots — see "Debugging with serial output" below and
+[`docs/MONITOR.md`](MONITOR.md).
+
 ### I forgot the pedal's IP address
 
 1. On the pedal, go to **Settings → Wi-Fi**.
@@ -72,7 +78,7 @@ If the pedal isn't on Wi-Fi, connect it first.
 
 **What to do**:
 
-1. Check the serial monitor for error output (see "Reading serial output" below).
+1. Check the serial monitor for error output (see "Debugging with serial output" below).
 2. Look for common causes in the table below.
 3. Edit your plugin code to fix the issue.
 4. Rebuild, revalidate, re-upload, and try again.
@@ -175,9 +181,28 @@ printf("Debug: frequency = %f Hz\n", frequency);
 
 ### How to read serial output
 
-**Option 1: Monitor over USB**
+The console comes out of the pedal's **USB-C port** at **115200 baud**. Plug the
+pedal into your computer with a USB-C data cable.
 
-If your pedal is connected to your computer via USB:
+**Option 1: The bundled monitor scripts (recommended — nothing to install)**
+
+The SDK ships zero-install monitor scripts that auto-detect the pedal (by its
+Espressif USB vendor ID) and stream its console — no ESP-IDF, Python, or PuTTY
+needed:
+
+```sh
+./monitor.sh        # macOS / Linux — auto-detect and stream (--list to see ports)
+```
+```powershell
+.\monitor.ps1       # Windows (PowerShell)
+```
+
+Leave it running and power-cycle the pedal to capture the full boot log — plugin
+scan results, rejection reasons, and crash backtraces. It reconnects automatically
+across the restart. Quit with **Ctrl-C**. Full usage and a backtrace-decoding note
+are in [`docs/MONITOR.md`](MONITOR.md).
+
+**Option 2: Your own serial terminal**
 
 ```sh
 # macOS / Linux
@@ -189,9 +214,10 @@ screen /dev/tty.usbserial-* 115200
 
 Press Ctrl+C to exit.
 
-**Option 2: ESP-IDF built-in monitor**
+**Option 3: ESP-IDF built-in monitor**
 
-If you built with native ESP-IDF (not Docker):
+If you have a native ESP-IDF install (not Docker), `idf.py monitor` also
+symbolizes crash backtraces to `file:line`:
 
 ```sh
 idf.py monitor
