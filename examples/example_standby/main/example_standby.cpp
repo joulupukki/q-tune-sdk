@@ -170,7 +170,7 @@ static void es_on_touch(lv_event_t *e) {
 // ---------------------------------------------------------------------------
 
 static const char *es_get_name(void) {
-    return "Dot";
+    return "Example";
 }
 
 static bool es_enable_screen(void) {
