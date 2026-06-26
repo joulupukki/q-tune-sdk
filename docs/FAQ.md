@@ -39,8 +39,7 @@ from bricking the pedal. If you think something essential is missing, ask on
 No — if the firmware doesn't export it, the plugin won't load (the validator and
 the loader both reject it). [`docs/ALLOWED_SYMBOLS.md`](ALLOWED_SYMBOLS.md) is the
 authoritative list. Symbols can only be added on the firmware side; request one on
-[Discord](https://discord.gg/evtjkEj9GX) or in the
-[firmware project](https://github.com/btimothy/q-tune).
+[Discord](https://discord.gg/evtjkEj9GX).
 
 ## Which SDK version matches my pedal's firmware?
 

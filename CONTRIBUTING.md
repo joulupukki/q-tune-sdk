@@ -24,8 +24,7 @@ you're free to share or sell what you make (see [FAQ](docs/FAQ.md)).
 The allowlist in [`docs/ALLOWED_SYMBOLS.md`](docs/ALLOWED_SYMBOLS.md) is generated
 from the **firmware's** export table — the SDK can't add a symbol on its own. If a
 function you need isn't exported, request it on
-[Discord](https://discord.gg/evtjkEj9GX) or in the
-[firmware project](https://github.com/btimothy/q-tune). Once it's exported in a
+[Discord](https://discord.gg/evtjkEj9GX). Once it's exported in a
 firmware release, a matching SDK release picks it up.
 
 ## I want to send a pull request to the SDK

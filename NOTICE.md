@@ -2,7 +2,7 @@ q-tune-sdk
 Copyright 2026 Boyd Timothy
 
 This product includes software developed for the Q-Tune chromatic guitar
-tuner pedal (https://github.com/btimothy/q-tune).
+tuner pedal.
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
