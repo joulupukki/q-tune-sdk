@@ -22,6 +22,6 @@
 /plugins/tuner/*
 /plugins/standby/*
 !/plugins/tuner/gauge/
-!/plugins/tuner/strobe/
+!/plugins/tuner/phase/
 !/plugins/standby/bouncer/
 !/plugins/standby/hyperdrive/

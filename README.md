@@ -19,7 +19,7 @@ samples to start from:
 | Sample | Kind | What it looks like |
 |--------|------|--------------------|
 | [`gauge`](plugins/tuner/gauge) | Tuner | A round needle gauge that sweeps with how flat/sharp you are |
-| [`strobe`](plugins/tuner/strobe) | Tuner | Scrolling strobe stripes that freeze the instant you're in tune |
+| [`phase`](plugins/tuner/phase) | Tuner | Scrolling strobe stripes that freeze the instant you're in tune |
 | [`bouncer`](plugins/standby/bouncer) | Standby | A dot bouncing around the screen; tap to send it somewhere |
 | [`hyperdrive`](plugins/standby/hyperdrive) | Standby | A warp-speed starfield that boosts when you tap or play |
 

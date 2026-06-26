@@ -74,12 +74,12 @@ The UI library is **LVGL 9.2**.
    for every plugin you build**, sitting alongside the bundled samples: your
    project there is gitignored, so the user's work stays separate from the SDK and
    survives a `git pull` to update the SDK. (The bundled samples that ship with the
-   SDK — `plugins/tuner/gauge`, `plugins/tuner/strobe`, `plugins/standby/bouncer`,
+   SDK — `plugins/tuner/gauge`, `plugins/tuner/phase`, `plugins/standby/bouncer`,
    `plugins/standby/hyperdrive` — are the exceptions that *are* tracked.)
 2. **Write the UI** by editing the project's `main/<name>.cpp` — implement the
    interface callbacks (see "The two interfaces" below). Reuse patterns from the
    bundled samples: `plugins/tuner/gauge` and `plugins/standby/bouncer` (and the
-   flashier `plugins/tuner/strobe` / `plugins/standby/hyperdrive`).
+   flashier `plugins/tuner/phase` / `plugins/standby/hyperdrive`).
 3. **Build** (Docker, no local toolchain needed):
    ```sh
    ./docker-build.sh plugins/tuner/glow_needle     # macOS / Linux
@@ -368,7 +368,7 @@ So make the build clean and the validation green, and give them a short
 
 - `plugins/tuner/gauge/` and `plugins/standby/bouncer/` — complete, working,
   landscape-aware plugins. **Read these first**; copy their patterns. (Two more
-  bundled samples: `plugins/tuner/strobe` and `plugins/standby/hyperdrive`.)
+  bundled samples: `plugins/tuner/phase` and `plugins/standby/hyperdrive`.)
 - `template/` — minimal skeletons to start from (the scaffold uses these).
 - `docs/ALLOWED_SYMBOLS.md` — the authoritative allowed-call list.
 - `docs/GETTING_STARTED.md` — the human walkthrough (point non-coders here).

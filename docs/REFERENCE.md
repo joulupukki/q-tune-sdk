@@ -222,7 +222,7 @@ q-tune-sdk/
     │   │       ├── gauge.cpp       Implements TunerGUIInterface (needle gauge)
     │   │       ├── CMakeLists.txt
     │   │       └── idf_component.yml
-    │   └── strobe/                 Complete IDF project → strobe.so (strobe tuner)
+    │   └── phase/                  Complete IDF project → phase.so (strobe-style tuner)
     │
     └── standby/
         ├── bouncer/                Complete IDF project → bouncer.so (bouncing dot)

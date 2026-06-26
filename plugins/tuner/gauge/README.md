@@ -1,7 +1,7 @@
 # gauge — Q-Tune Tuner Plugin Sample
 
 This project builds `gauge.so`, a minimal tuner UI plugin for Q-Tune. It's one of
-the bundled tuner samples (alongside [`strobe`](../strobe)) — a clean starting
+the bundled tuner samples (alongside [`phase`](../phase)) — a clean starting
 point to copy and build on. It demonstrates how to implement `TunerGUIInterface`,
 export the plugin descriptor, and use LVGL widgets (note glyphs + an `lv_scale`
 needle gauge) together with the host API accessors (`qt_get_note_glyph`,

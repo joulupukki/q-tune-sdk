@@ -139,7 +139,7 @@ If something goes wrong:
 
 - **Want to customize your plugin?** Edit the source file and rebuild. Claude Code can help you tweak colors, layout, behavior, etc.
 - **Want to add touch interactivity?** See `docs/TOUCH.md` for how to respond to taps.
-- **Want to go further?** Read `docs/REFERENCE.md` (the technical reference), look at the bundled samples `plugins/tuner/gauge` and `plugins/standby/bouncer` (and `plugins/tuner/strobe` / `plugins/standby/hyperdrive`), and explore `docs/ALLOWED_SYMBOLS.md` for the full list of available LVGL widgets.
+- **Want to go further?** Read `docs/REFERENCE.md` (the technical reference), look at the bundled samples `plugins/tuner/gauge` and `plugins/standby/bouncer` (and `plugins/tuner/phase` / `plugins/standby/hyperdrive`), and explore `docs/ALLOWED_SYMBOLS.md` for the full list of available LVGL widgets.
 - **Having trouble?** See `docs/TROUBLESHOOTING.md` and `docs/DEPLOY.md`.
 
 ## Quick checklist

@@ -1,6 +1,6 @@
-# strobe — Q-Tune Tuner Plugin Sample
+# phase — Q-Tune Tuner Plugin Sample
 
-This project builds `strobe.so`, a tuner UI plugin for Q-Tune in the style of a
+This project builds `phase.so`, a tuner UI plugin for Q-Tune in the style of a
 classic mechanical / Peterson-type **strobe** tuner. It appears in the menu as
 **"Phase"** (the firmware already has a built-in tuner named "Strobe"). It's one
 of the bundled tuner samples (alongside [`gauge`](../gauge)) — copy it and build
@@ -32,22 +32,22 @@ globals.
 From the SDK repo root (Docker, no local ESP-IDF needed):
 
 ```sh
-./docker-build.sh plugins/tuner/strobe
+./docker-build.sh plugins/tuner/phase
 ```
 
-Output: `build/strobe.so` (the Docker build runs the validator automatically).
+Output: `build/phase.so` (the Docker build runs the validator automatically).
 
 ## Upload
 
 1. Put Q-Tune in USB Drive Mode (hold the foot switch at power-on) and copy
-   `build/strobe.so` into the `/plugins` folder. Or upload it over Wi-Fi at
+   `build/phase.so` into the `/plugins` folder. Or upload it over Wi-Fi at
    `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
 2. Restart the device.
 3. Select "Phase" from Settings > Tuner UI.
 
 ## Plugin identity
 
-The descriptor's `uid` is `"qtune.strobe.gdam5c"` — the plugin's stable identity.
+The descriptor's `uid` is `"qtune.phase.gdam5c"` — the plugin's stable identity.
 The firmware assigns the numeric menu slot dynamically at load. Never change a
 `uid` after publishing or the user's saved selection is lost.
 

@@ -108,7 +108,7 @@ static void @PREFIX@_init(lv_obj_t *screen) {
 
     // TODO: make it yours. Ideas: a needle gauge (lv_scale), an arc, a moving
     // bar, an animated background. See plugins/tuner/gauge for a needle gauge,
-    // or plugins/tuner/strobe for a strobe display.
+    // or plugins/tuner/phase for a strobe display.
 }
 
 // Called ~30x/second with the latest pitch. Keep it fast.

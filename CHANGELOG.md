@@ -51,7 +51,7 @@ plugins as relocatable `.so` modules the firmware loads at boot.
 ### Docs & sample plugins
 - `CLAUDE.md` for AI-assisted plugin authoring with Claude Code.
 - Bundled sample projects under `plugins/`, organized by type: tuners
-  `plugins/tuner/gauge` (needle gauge) and `plugins/tuner/strobe` (strobe);
+  `plugins/tuner/gauge` (needle gauge) and `plugins/tuner/phase` (strobe-style);
   standby screens `plugins/standby/bouncer` (bouncing dot, touch-enabled) and
   `plugins/standby/hyperdrive` (warp starfield). `new_plugin.py` scaffolds your
   own projects alongside them in `plugins/<type>/` (gitignored).

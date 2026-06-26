@@ -1,4 +1,4 @@
-# main/CMakeLists.txt — Strobe plugin component
+# main/CMakeLists.txt — Phase plugin component
 #
 # Only stub_app.c is registered (it provides the app_main() the normal IDF app
 # image needs). The real plugin source is compiled into the .so by

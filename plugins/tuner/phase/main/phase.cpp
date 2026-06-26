@@ -1,5 +1,5 @@
 /*
- * strobe.cpp — Phase
+ * phase.cpp — Phase
  *
  * A Q-Tune TUNER plugin in the style of a classic mechanical / Peterson-type
  * STROBE tuner. Instead of a needle it shows several horizontal bands of
@@ -31,25 +31,25 @@
 #include <limits.h>
 
 // --- Interface callbacks (forward declarations) ----------------------------
-static const char  *str_get_name(void);
-static TuningUIType str_get_type(void);
-static void         str_init(lv_obj_t *screen);
-static void         str_display_frequency(float frequency,
+static const char  *ph_get_name(void);
+static TuningUIType ph_get_type(void);
+static void         ph_init(lv_obj_t *screen);
+static void         ph_display_frequency(float frequency,
                                                float target_frequency,
                                                TunerNoteName note_name,
                                                int octave,
                                                float cents,
                                                bool show_mute_indicator);
-static void         str_align_settings_button(lv_obj_t *btn);
-static void         str_cleanup(void);
+static void         ph_align_settings_button(lv_obj_t *btn);
+static void         ph_cleanup(void);
 
-static TunerGUIInterface str_interface = {
-    .get_name              = str_get_name,
-    .get_type              = str_get_type,
-    .init                  = str_init,
-    .display_frequency     = str_display_frequency,
-    .align_settings_button = str_align_settings_button,
-    .cleanup               = str_cleanup,
+static TunerGUIInterface ph_interface = {
+    .get_name              = ph_get_name,
+    .get_type              = ph_get_type,
+    .init                  = ph_init,
+    .display_frequency     = ph_display_frequency,
+    .align_settings_button = ph_align_settings_button,
+    .cleanup               = ph_cleanup,
 };
 
 // --- Plugin descriptor + entry point (REQUIRED — do not remove) ------------
@@ -58,11 +58,11 @@ QTUNE_PLUGIN_EXPORT QTunePluginDescriptor qtune_plugin_descriptor = {
     .abi_version  = QTUNE_PLUGIN_ABI_VERSION,
     .lvgl_version = QTUNE_LVGL_VERSION,
     .type         = QTUNE_PLUGIN_TUNER,
-    .sdk_build    = "strobe-1.0",
-    .interface    = &str_interface,
+    .sdk_build    = "phase-1.0",
+    .interface    = &ph_interface,
     // Stable identity. The firmware assigns the numeric slot dynamically at load;
     // never change this uid once published or the user's saved selection is lost.
-    .uid          = "qtune.strobe.gdam5c",
+    .uid          = "qtune.phase.gdam5c",
 };
 
 QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
@@ -93,7 +93,7 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 static const float BAND_MULT[NUM_BANDS] = { 0.5f, 1.0f, 1.5f, 2.25f };
 
 // ---------------------------------------------------------------------------
-// State (set in str_init, nulled in str_cleanup)
+// State (set in ph_init, nulled in ph_cleanup)
 // ---------------------------------------------------------------------------
 static lv_obj_t  *s_screen    = NULL;
 static lv_obj_t  *s_panel     = NULL;            // frame around the strobe bands
@@ -127,20 +127,20 @@ static int            s_cents_q     = INT_MIN;   // last shown cents (tenths) �
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-static lv_color_t str_accent(void) {
+static lv_color_t ph_accent(void) {
     lv_palette_t p = qt_get_note_name_palette();
     return (p == LV_PALETTE_NONE) ? lv_palette_main(LV_PALETTE_AMBER)
                                   : lv_palette_main(p);
 }
 
-static const char *str_get_name(void) { return "Phase"; }
-static TuningUIType str_get_type(void) { return TuningUITypeStandard; }
+static const char *ph_get_name(void) { return "Phase"; }
+static TuningUIType ph_get_type(void) { return TuningUITypeStandard; }
 
 // ---------------------------------------------------------------------------
 // Animation tick — advances the scroll phase of every band and repositions the
 // stripes. Runs inside the LVGL lock (host holds it); never lock here.
 // ---------------------------------------------------------------------------
-static void str_timer_cb(lv_timer_t *t) {
+static void ph_timer_cb(lv_timer_t *t) {
     (void)t;
     if (!s_panel) { return; }
 
@@ -176,7 +176,7 @@ static void str_timer_cb(lv_timer_t *t) {
 // ---------------------------------------------------------------------------
 // Build the strobe panel + bands + stripes inside a given rectangle.
 // ---------------------------------------------------------------------------
-static void str_build_panel(lv_coord_t px, lv_coord_t py,
+static void ph_build_panel(lv_coord_t px, lv_coord_t py,
                             lv_coord_t pw, lv_coord_t ph) {
     s_panel = lv_obj_create(s_screen);
     lv_obj_set_size(s_panel, pw, ph);
@@ -229,7 +229,7 @@ static void str_build_panel(lv_coord_t px, lv_coord_t py,
     }
 }
 
-static void str_init(lv_obj_t *screen) {
+static void ph_init(lv_obj_t *screen) {
     s_screen = screen;
     s_timer  = NULL;
     s_color_state = -1;
@@ -249,13 +249,13 @@ static void str_init(lv_obj_t *screen) {
     if (is_landscape) {
         // Note on the left ~38% width, strobe panel fills the right.
         lv_coord_t note_col = (lv_coord_t)(W * 0.38f);
-        str_build_panel(note_col, 12, W - note_col - 12, H - 24);
+        ph_build_panel(note_col, 12, W - note_col - 12, H - 24);
     } else {
         // Note across the top; the panel starts below the note (and the optional
         // cents readout), derived from the real note height so nothing overlaps.
         lv_coord_t panel_top = NOTE_TOP_MARGIN + NOTE_GLYPH_PX + 8;
         if (s_show_cents) panel_top += 36;   // room for the cents label below the note
-        str_build_panel(12, panel_top, W - 24, H - panel_top - 14);
+        ph_build_panel(12, panel_top, W - 24, H - panel_top - 14);
     }
 
     // Note artwork (letter + sharp overlay).
@@ -290,15 +290,15 @@ static void str_init(lv_obj_t *screen) {
     s_mute_img = lv_image_create(screen);
     lv_image_set_src(s_mute_img, qt_get_mute_glyph());
     lv_obj_set_style_img_recolor_opa(s_mute_img, LV_OPA_COVER, 0);
-    lv_obj_set_style_img_recolor(s_mute_img, str_accent(), 0);
+    lv_obj_set_style_img_recolor(s_mute_img, ph_accent(), 0);
     lv_obj_align(s_mute_img, LV_ALIGN_TOP_LEFT, CORNER_MARGIN, CORNER_MARGIN);
     lv_obj_add_flag(s_mute_img, LV_OBJ_FLAG_HIDDEN);
 
-    s_timer = lv_timer_create(str_timer_cb, TIMER_MS, NULL);
+    s_timer = lv_timer_create(ph_timer_cb, TIMER_MS, NULL);
 }
 
 // Recolour the stripes / panel for the three states.
-static void str_apply_color_state(int state) {
+static void ph_apply_color_state(int state) {
     if (state == s_color_state) { return; }
     s_color_state = state;
 
@@ -306,8 +306,8 @@ static void str_apply_color_state(int state) {
     lv_color_t border_col;
     switch (state) {
         case 2:  // locked
-            bar_col    = str_accent();
-            border_col = str_accent();
+            bar_col    = ph_accent();
+            border_col = ph_accent();
             break;
         case 1:  // searching
             bar_col    = lv_color_hex(0x777777);
@@ -331,7 +331,7 @@ static void str_apply_color_state(int state) {
     }
 }
 
-static void str_display_frequency(float frequency,
+static void ph_display_frequency(float frequency,
                                        float target_frequency,
                                        TunerNoteName note_name,
                                        int octave,
@@ -366,10 +366,10 @@ static void str_display_frequency(float frequency,
 
     // Colour state.
     int state = !active ? 0 : (in_tune ? 2 : 1);
-    str_apply_color_state(state);
+    ph_apply_color_state(state);
 
     // Note glyph colour: accent when locked, white when searching, dim when none.
-    lv_color_t note_col = in_tune ? str_accent()
+    lv_color_t note_col = in_tune ? ph_accent()
                         : active  ? lv_color_white()
                                   : lv_color_hex(0x606060);
     lv_obj_set_style_img_recolor(s_note_img, note_col, 0);
@@ -389,15 +389,15 @@ static void str_display_frequency(float frequency,
             }
         }
         lv_obj_set_style_text_color(s_cents_lbl,
-                                    in_tune ? str_accent() : lv_color_hex(0x888888), 0);
+                                    in_tune ? ph_accent() : lv_color_hex(0x888888), 0);
     }
 }
 
-static void str_align_settings_button(lv_obj_t *btn) {
+static void ph_align_settings_button(lv_obj_t *btn) {
     lv_obj_align(btn, LV_ALIGN_BOTTOM_RIGHT, -CORNER_MARGIN, -CORNER_MARGIN);
 }
 
-static void str_cleanup(void) {
+static void ph_cleanup(void) {
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
     s_screen    = NULL;
     s_panel     = NULL;

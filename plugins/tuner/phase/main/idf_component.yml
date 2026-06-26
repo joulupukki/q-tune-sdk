@@ -1,4 +1,4 @@
-## IDF Component Manager Manifest — Strobe plugin
+## IDF Component Manager Manifest — Phase plugin
 ##
 ## Pin lvgl to exactly 9.2.2 so the compiled plugin's struct layouts match the
 ## firmware. The loader rejects any major.minor mismatch. DO NOT change this pin.
