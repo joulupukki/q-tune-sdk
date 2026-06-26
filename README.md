@@ -40,7 +40,7 @@ minimal starting points are in [`template/`](template/).
 
 **Helpful docs:** [Getting Started](docs/GETTING_STARTED.md) ·
 [Deploying to the pedal](docs/DEPLOY.md) · [Touch input](docs/TOUCH.md) ·
-[Troubleshooting](docs/TROUBLESHOOTING.md) · [Allowed symbols](docs/ALLOWED_SYMBOLS.md)
+[Troubleshooting](docs/TROUBLESHOOTING.md) · [Allowed symbols](docs/ALLOWED_SYMBOLS.md) · [Serial console](docs/MONITOR.md)
 
 > **Safety:** plugins are native code that runs unsandboxed on your pedal — see
 > [Security](#12-security) before installing a plugin you didn't build.
@@ -202,6 +202,7 @@ q-tune-sdk/
 ├── COMPATIBILITY.md                SDK ↔ ABI ↔ LVGL ↔ firmware version matrix
 ├── Dockerfile                      Pinned ESP-IDF v5.3.2 build environment
 ├── docker-build.sh / docker-build.ps1  One-step build+validate (macOS·Linux / Windows)
+├── monitor.sh / monitor.ps1         Watch the pedal's serial console (zero install)
 ├── .devcontainer/                  VS Code "Reopen in Container" config
 │
 ├── include/                        SDK headers — add this dir to your include path
@@ -218,6 +219,7 @@ q-tune-sdk/
 │
 ├── docs/
 │   ├── ALLOWED_SYMBOLS.md          Generated list of exported host symbols (§7)
+│   ├── MONITOR.md                  Watching the serial console to debug plugins
 │   └── FAQ.md                      Common questions (licensing, API boundaries, Windows)
 │
 ├── tools/
