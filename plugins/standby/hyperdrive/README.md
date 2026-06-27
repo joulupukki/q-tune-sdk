@@ -30,6 +30,10 @@ From the SDK repo root (Docker, no local ESP-IDF needed):
 ./docker-build.sh plugins/standby/hyperdrive
 ```
 
+> The first build pulls the pinned ESP-IDF Docker image (a few GB) and the LVGL /
+> elf_loader components — expect several minutes. Later builds reuse the cache and
+> finish in seconds.
+
 Output: `build/hyperdrive.so` (the Docker build runs the validator automatically).
 
 ## Upload

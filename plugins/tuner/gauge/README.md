@@ -43,6 +43,10 @@ With Docker (no local ESP-IDF needed) — from the SDK repo root:
 ./docker-build.sh plugins/tuner/gauge
 ```
 
+> The first build pulls the pinned ESP-IDF Docker image (a few GB) and the LVGL /
+> elf_loader components — expect several minutes. Later builds reuse the cache and
+> finish in seconds.
+
 Or with a native ESP-IDF install (after `. <idf>/export.sh`), from this directory:
 
 ```sh

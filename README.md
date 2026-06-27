@@ -61,6 +61,10 @@ The scaffolder drops your project in `plugins/<type>/` next to the samples (it's
 gitignored, so your work stays separate and survives a `git pull`) and prints the
 exact build/validate paths when it finishes.
 
+The first `docker-build.sh` downloads the pinned ESP-IDF image (a few GB) plus
+components, so it takes several minutes; every build after that reuses the cache and
+finishes in seconds.
+
 → **Then read [`docs/REFERENCE.md`](docs/REFERENCE.md)** for the full contract,
 lifecycle, and allowed API, and study the [samples](plugins/) and
 [`template/`](template/).

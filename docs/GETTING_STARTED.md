@@ -96,9 +96,15 @@ Claude Code will:
 
 - Call `python3 tools/new_plugin.py` to create a new project under the `plugins/<type>/` folder (a tuner lands in `plugins/tuner/`, a standby in `plugins/standby/`) with a stable auto-generated uid (the plugin's identity), name prefix, and build tag. You don't pick a number — the firmware assigns one dynamically at load time. (`plugins/<type>/` is the standard home for your projects, alongside the bundled samples; your work there is gitignored, so it stays separate from the SDK and survives a `git pull` to update the SDK.)
 - Write the C++ source code implementing your tuner or standby interface.
-- Run `./docker-build.sh plugins/<type>/<your-project>` to build it. Docker will download the pinned ESP-IDF and LVGL and compile your code.
+- Run `./docker-build.sh plugins/<type>/<your-project>` to build it. Docker downloads the pinned ESP-IDF and LVGL and compiles your code.
 - Run `python3 tools/validate_plugin.py <path-to-.so>` to check it before declaring success.
 - Show you the path to your `.so` file (usually something like `plugins/tuner/my_tuner/build/my_tuner.so`).
+
+> **The first build takes a while.** That very first `docker-build.sh` run downloads
+> the full pinned ESP-IDF toolchain image (a few GB) plus the LVGL and elf_loader
+> components, so it can take several minutes — longer on a slow connection. It's a
+> one-time download: every build after that reuses the cached image and finishes in
+> well under a minute. (Claude Code just waits for it.)
 
 If the build or validation fails, Claude Code will show the error and suggest a fix. Follow the troubleshooting hints in `docs/TROUBLESHOOTING.md` if needed.
 
