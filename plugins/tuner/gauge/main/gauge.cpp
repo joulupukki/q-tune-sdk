@@ -114,7 +114,9 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 //
 // The lv_scale widget is the most export-complete indicator primitive. We use
 // it in ROUND_INNER mode as a circular needle gauge. cents [-50,50] are scaled
-// 10x to fill the scale range for good visual resolution.
+// 10x to fill the scale range for good visual resolution. The needle sweeps a
+// narrow 120-degree arc across the TOP (centred on vertical) rather than a wide
+// arc, so a given cents error moves it less — calmer, less finicky to tune by.
 // ---------------------------------------------------------------------------
 #define SCALE_RANGE_MIN    (-500)
 #define SCALE_RANGE_MAX    (500)
@@ -128,7 +130,10 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 // landscape places them side by side (note on the left, gauge on the right). In
 // both cases the note and gauge never overlap.
 #define NOTE_TOP_MARGIN     20   // portrait: px from the top edge to the note
-#define SCALE_BOTTOM_MARGIN 16   // portrait: px from the bottom edge to the gauge
+#define SCALE_BOTTOM_DROP   16   // portrait: px to drop the gauge BELOW the bottom edge.
+                                 // Only the top ~120-degree arc is used now, so dropping
+                                 // the gauge slides its unused lower half off-screen and
+                                 // gives the note up top room to breathe.
 #define NOTE_SIDE_MARGIN    12   // landscape: px in from the left edge to the note
 #define SCALE_SIDE_MARGIN    8   // landscape: px in from the right edge to the gauge
 #define CORNER_MARGIN        8   // inset for the corner status icons (mute / logo)
@@ -234,8 +239,8 @@ static void ga_init(lv_obj_t *screen) {
     lv_obj_set_style_radius(s_scale, LV_RADIUS_CIRCLE, 0);
 
     lv_scale_set_range(s_scale, SCALE_RANGE_MIN, SCALE_RANGE_MAX);
-    lv_scale_set_angle_range(s_scale, 270);  // 270-degree sweep
-    lv_scale_set_rotation(s_scale, 135);     // open at the bottom
+    lv_scale_set_angle_range(s_scale, 120);  // narrow 120-degree sweep across the top
+    lv_scale_set_rotation(s_scale, 210);     // centred on vertical (needle up = in tune)
 
     lv_scale_set_label_show(s_scale, false);
     lv_scale_set_total_tick_count(s_scale, 11);  // one per 50 cents
@@ -244,9 +249,13 @@ static void ga_init(lv_obj_t *screen) {
     lv_obj_set_style_line_color(s_scale, lv_color_hex(0x404040), LV_PART_ITEMS);
 
     if (is_landscape) {
-        lv_obj_align(s_scale, LV_ALIGN_RIGHT_MID, -SCALE_SIDE_MARGIN, 0);
+        // Only the top ~120-degree arc is used, so it lives in the upper half of
+        // the circle. Centring the widget leaves the arc riding high; nudge it
+        // down by ~a quarter of the diameter (half the radius) so the visible arc
+        // sits at the screen's vertical centre, level with the note on the left.
+        lv_obj_align(s_scale, LV_ALIGN_RIGHT_MID, -SCALE_SIDE_MARGIN, scale_size / 4);
     } else {
-        lv_obj_align(s_scale, LV_ALIGN_BOTTOM_MID, 0, -SCALE_BOTTOM_MARGIN);
+        lv_obj_align(s_scale, LV_ALIGN_BOTTOM_MID, 0, SCALE_BOTTOM_DROP);
     }
 
     // Needle line inside the scale. Local inline styles keep colour updates in
