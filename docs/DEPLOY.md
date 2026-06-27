@@ -91,8 +91,8 @@ At boot, the firmware scans `/data/plugins/`, loads each `.so` via the ELF loade
 
 After restart, your plugin appears in the appropriate settings menu:
 
-- **Tuner plugins**: Go to **Settings → Tuner UI** and select your plugin by name.
-- **Standby plugins**: Go to **Settings → Standby Screen** and select your plugin by name.
+- **Tuner plugins**: Go to **Settings → Tuner → Style** and select your plugin by name.
+- **Standby plugins**: Go to **Settings → Display → Standby Screen** and select your plugin by name.
 
 The selection is saved to the pedal's non-volatile storage. Next time you power on, that plugin will be active.
 

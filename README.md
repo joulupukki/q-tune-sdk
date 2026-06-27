@@ -1,6 +1,6 @@
 # q-tune-sdk
 
-Build your own UI for the **Q-Tune ESP32-S3 guitar-tuner pedal** — a custom tuning
+Build your own UI for the **[Q-Tune guitar tuner pedal](https://www.q-tune.com/)** (it runs on an ESP32-S3) — a custom tuning
 display or a standby/screensaver screen — and load it onto the pedal. Your UI ships
 as a small plugin file (a `.so`; see the [glossary](docs/GLOSSARY.md)) that the
 pedal picks up at startup and lists right next to its built-in screens.
@@ -14,7 +14,7 @@ Licensed under **Apache-2.0** (see [`LICENSE`](LICENSE)) — you're free to buil
 
 Two kinds of plugin: a **tuner** (the active display while you tune) or a **standby
 screen** (what the pedal shows when idle). The SDK ships four complete, working
-samples to start from:
+samples to reference:
 
 | Sample | Kind | What it looks like |
 |--------|------|--------------------|
@@ -72,8 +72,8 @@ lifecycle, and allowed API, and study the [samples](plugins/) and
 ### I'm using an AI agent / Claude Code
 
 This repo ships a [`CLAUDE.md`](CLAUDE.md) that the assistant loads automatically —
-it encodes every rule needed to one-shot a working plugin, and points at the samples
-to copy. There's nothing else you need to set up.
+it encodes every rule needed to one-shot a working plugin, using the samples
+as references. Start by copying one of the samples or create a completely new idea. There's nothing else you need to set up.
 
 ---
 

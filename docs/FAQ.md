@@ -51,7 +51,7 @@ LVGL contracts at boot and reports a mismatch on the pedal's `/plugins` page.
 
 It should — design it to. The pedal can run either orientation, so lay everything
 out relative to the `screen_width` / `screen_height` / `is_landscape` globals
-instead of hard-coding 240/320. Both bundled examples do this; copy their pattern.
+instead of hard-coding 240/320. The bundled example plugins do this; copy their pattern.
 
 ## My plugin crashes the pedal when I leave the screen. Why?
 

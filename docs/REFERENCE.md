@@ -103,7 +103,7 @@ The first build pulls that image (a few GB) and the LVGL / elf_loader components
 so it can take several minutes; every later build reuses the cache and finishes in
 well under a minute.
 
-**macOS / Linux:**
+**macOS (with Docker Desktop running)/ Linux:**
 
 ```sh
 # Build any plugin project (writes build/<name>.so, then validates it):
@@ -359,17 +359,6 @@ override it with `--uid`.
   number as a string (`"0"`, `"1"`, …). The loader rejects a plugin whose uid is
   a bare integer or duplicates another plugin's uid.
 
-The numeric ID is now a **firmware-internal assignment pool**, not something an
-author chooses. At load time the firmware hands each plugin the next free number
-in its reserved range (skipping built-ins and already-loaded plugins); a plugin's
-number may even differ between boots, which is fine because nothing persistent
-references it. For reference, the reserved pools are:
-
-| Plugin type | Firmware assignment pool |
-|-------------|--------------------------|
-| Tuner (`TunerGUIInterface`) | **100 – 199** |
-| Standby (`TunerStandbyGUIInterface`) | **210 – 254** |
-
 ---
 
 ## 7. Allowed API surface
@@ -564,8 +553,8 @@ cmake --build build --target validate
 
 Copy the `.so` into the pedal's `/plugins` folder — over USB Drive Mode, or via
 the pedal's `http://<device-ip>/plugins` page over Wi-Fi — then restart and select
-it under *Settings > Tuner UI* (for
-`QTUNE_PLUGIN_TUNER`) or *Settings > Standby Screen* (for `QTUNE_PLUGIN_STANDBY`).
+it under *Settings > Tuner > Style * (for
+`QTUNE_PLUGIN_TUNER`) or *Settings > Display > Standby Screen* (for `QTUNE_PLUGIN_STANDBY`).
 The selection is persisted to NVS by the firmware.
 
 **[`DEPLOY.md`](DEPLOY.md) has the full step-by-step** for both upload methods,
@@ -591,7 +580,7 @@ convenience for repeated testing).
 to watch it is the bundled `monitor.sh` / `monitor.ps1` — see [`MONITOR.md`](MONITOR.md).
 You can also use the browser-based logs view at the
 [Firmware Installer](https://www.q-tune.com/install/) page (Chrome → *Connect to
-device* → *Logs & Console*).
+device* → *Logs & Console*), though you won't be able to see messages shown during the booting process.
 
 ---
 
@@ -650,8 +639,7 @@ verify before you ship:
       `CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=y`.
 - [ ] Update `CMakeLists.txt` `project()` name and `qtune_project_so()` name to
       match your plugin filename.
-- [ ] Implement `init()`, `display_frequency()`, `cleanup()` (and
-      `align_settings_button()` for tuner plugins).
+- [ ] Implement `init()`, `display_frequency()`, `cleanup()`, ( and `align_settings_button() & align_reference_pitch_indicator()` for tuner plugins).
 - [ ] Delete any `lv_timer` / `lv_anim` you create in `cleanup()`.
 - [ ] Build, validate, upload to `/plugins`, restart, select in UI.
 

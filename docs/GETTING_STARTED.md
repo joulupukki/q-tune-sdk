@@ -106,6 +106,8 @@ Claude Code will:
 > one-time download: every build after that reuses the cached image and finishes in
 > well under a minute. (Claude Code just waits for it.)
 
+**TIP:** The more specific you are, the better result you'll get. Don't be afraid to keep iterating with additional prompts to adjust your plugin to be exactly what you want.
+
 If the build or validation fails, Claude Code will show the error and suggest a fix. Follow the troubleshooting hints in `docs/TROUBLESHOOTING.md` if needed.
 
 ## Step 6: Get your .so file
@@ -123,8 +125,8 @@ Follow the steps in `docs/DEPLOY.md`:
 
 After uploading, **restart your pedal** (power-cycle or Settings → Restart). The firmware scans `/data/plugins/`, loads your `.so`, and registers it. Then go to:
 
-- **Settings → Tuner UI** (if you built a tuner) or
-- **Settings → Standby Screen** (if you built a standby)
+- **Settings → Tuner → Style** (if you built a tuner) or
+- **Settings → Display → Standby Screen** (if you built a standby)
 
 Select your plugin from the list. You'll see it immediately.
 

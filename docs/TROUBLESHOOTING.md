@@ -8,7 +8,7 @@ This guide covers common build, validation, deployment, and runtime problems and
 |---|---|---|
 | `CMakeCache.txt … different directory` | Stale build cache after moving the project | `rm -rf build/` then rebuild with `./docker-build.sh` or `idf.py build` |
 | `error: undefined reference to lv_xxx` | You called an LVGL function that isn't exported | Check `docs/ALLOWED_SYMBOLS.md`; replace with an exported equivalent (e.g., use `lv_scale_*` for gauges instead of `lv_arc_set_value`) |
-| `Docker not found` / `docker: command not found` | Docker isn't installed or not in your PATH | [Install Docker](https://docs.docker.com/get-docker/); restart your terminal after install |
+| `Docker not found` / `docker: command not found` | Docker isn't installed or not in your PATH | [Install Docker](https://docs.docker.com/get-docker/); restart your terminal after install. If you installed Docker Desktop, make sure it's running. |
 | Build runs but produces no `.so` file | CMake target name mismatch | Ensure your `CMakeLists.txt` `qtune_project_so()` name matches your actual plugin filename |
 | `error: expected…` (C++ syntax) | Typo or missing bracket in your code | Check the line number; look for unclosed braces, missing semicolons, typos in function names |
 
@@ -46,6 +46,8 @@ python3 tools/validate_plugin.py build/<your-plugin>.so
 Linux) or `.\monitor.ps1` (Windows) and power-cycle the pedal to watch the plugin
 scan as it boots — see "Debugging with serial output" below and
 [`docs/MONITOR.md`](MONITOR.md).
+
+**Bonus Tip:** Copy & paste the console log (with errors) into Claude Code for help troubleshooting.
 
 ### I forgot the pedal's IP address
 
