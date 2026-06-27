@@ -67,7 +67,7 @@ unfamiliar term below.)
         │           validates versions,
         │           registers the interface
         ▼
-  Appears in Settings > Tuner UI (or Settings > Standby Screen)
+  Appears in Settings > Tuner > Style (or Settings > Display > Standby Screen)
 ```
 
 In plain terms: the **ELF loader** is the part of the firmware that loads `.so`
@@ -553,7 +553,7 @@ cmake --build build --target validate
 
 Copy the `.so` into the pedal's `/plugins` folder — over USB Drive Mode, or via
 the pedal's `http://<device-ip>/plugins` page over Wi-Fi — then restart and select
-it under *Settings > Tuner > Style * (for
+it under *Settings > Tuner > Style* (for
 `QTUNE_PLUGIN_TUNER`) or *Settings > Display > Standby Screen* (for `QTUNE_PLUGIN_STANDBY`).
 The selection is persisted to NVS by the firmware.
 
@@ -639,7 +639,8 @@ verify before you ship:
       `CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=y`.
 - [ ] Update `CMakeLists.txt` `project()` name and `qtune_project_so()` name to
       match your plugin filename.
-- [ ] Implement `init()`, `display_frequency()`, `cleanup()`, ( and `align_settings_button() & align_reference_pitch_indicator()` for tuner plugins).
+- [ ] Implement `init()`, `display_frequency()`, `cleanup()` (and
+      `align_settings_button()` / `align_reference_pitch_indicator()` for tuner plugins).
 - [ ] Delete any `lv_timer` / `lv_anim` you create in `cleanup()`.
 - [ ] Build, validate, upload to `/plugins`, restart, select in UI.
 

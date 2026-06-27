@@ -272,4 +272,4 @@ QTUNE_PLUGIN_EXPORT const QTunePluginDescriptor *qtune_plugin_entry(void) {
 }
 ```
 
-Compile, validate, upload, select in Settings → Tuner UI, and tap the screen to cycle modes.
+Compile, validate, upload, select in Settings → Tuner → Style, and tap the screen to cycle modes.

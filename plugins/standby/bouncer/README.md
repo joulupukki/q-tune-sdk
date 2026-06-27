@@ -56,7 +56,7 @@ cmake --build build --target validate
    `build/bouncer.so` into the `/plugins` folder. Or upload it over Wi-Fi at
    `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
 2. Restart the device.
-3. Select "Bouncer" from Settings > Standby Screen.
+3. Select "Bouncer" from Settings > Display > Standby Screen.
 4. No guitar handy? Enable *Settings > Advanced > Developer Tools > Test Signal*
    to feed the screen a built-in sweep through the six guitar strings, so
    `display_frequency()` receives live note/cents data. Turn it off again for

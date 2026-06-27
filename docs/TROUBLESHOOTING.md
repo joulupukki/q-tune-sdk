@@ -39,7 +39,7 @@ python3 tools/validate_plugin.py build/<your-plugin>.so
 | Plugin has a missing or invalid `uid` | Every plugin needs a stable `uid` string in its descriptor. The scaffolding tool (`new_plugin.py`) generates one automatically; if you hand-edited it, make sure it's set and is **not** a bare integer (that space is reserved for built-ins). The firmware assigns the numeric slot for you — you don't choose a number |
 | Two installed plugins share the same `uid` | This happens if you copied a plugin's files without changing its `uid` — the firmware loads only one of them. Give each its own uid (re-running `new_plugin.py` generates a fresh one). List the `/plugins` folder (over USB Drive Mode, or the `/plugins` web page) to see what's installed |
 | Plugin validation failed but was uploaded anyway | Check whether it shows as disabled — a `<name>.so.disabled` file in the `/plugins` folder, or the disabled state on the `/plugins` web page. See "Crash-disabled plugins" below |
-| Plugin loads but wrong interface type | You built a Tuner but looked in Settings → Standby Screen (or vice versa). Check which kind you implemented |
+| Plugin loads but wrong interface type | You built a Tuner but looked in Settings → Display → Standby Screen (or vice versa). Check which kind you implemented |
 
 **Tip:** the serial console prints the exact reason a plugin was skipped (e.g.
 `rejected glow.so: missing symbol qtune_plugin_entry`). Run `./monitor.sh` (macOS/

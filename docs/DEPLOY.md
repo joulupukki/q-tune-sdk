@@ -178,6 +178,6 @@ If a plugin breaks the pedal entirely:
 - [ ] Pedal in USB Drive Mode (Method 1) or connected to Wi-Fi (Method 2).
 - [ ] `.so` uploaded to `/data/plugins/`.
 - [ ] Pedal restarted (power-cycle, Settings → Restart, or `/plugins` Restart button).
-- [ ] Plugin appears in Settings → Tuner UI (or Standby Screen).
+- [ ] Plugin appears in Settings → Tuner → Style (or Standby Screen).
 - [ ] Plugin selected and active.
 - [ ] Works as expected.

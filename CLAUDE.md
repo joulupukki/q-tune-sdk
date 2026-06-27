@@ -112,8 +112,8 @@ The UI library is **LVGL 9.2**.
    prefer USB Drive Mode (hold the foot switch at power-on to mount the pedal as a
    USB drive, then copy the `.so` into `/plugins`) — it's quicker and needs no
    network. Wi-Fi upload at `http://<pedal-ip>/plugins` is the alternative. Then
-   restart the pedal and pick the plugin under *Settings → Tuner UI* (or *Standby
-   Screen*). See `docs/DEPLOY.md`.
+   restart the pedal and pick the plugin under *Settings → Tuner → Style* (or
+   *Settings → Display → Standby Screen*). See `docs/DEPLOY.md`.
 
 ---
 
@@ -383,9 +383,8 @@ persists across reboots.
 
 ## Reference material in this repo
 
-- `plugins/tuner/gauge/` and `plugins/standby/bouncer/` — complete, working,
-  landscape-aware plugins. **Read these first**; copy their patterns. (Two more
-  bundled samples: `plugins/tuner/phase` and `plugins/standby/hyperdrive`.)
+- `plugins/tuner/gauge/`, `plugins/tuner/phase`, `plugins/standby/bouncer/`, and `plugins/standby/hyperdrive` — complete, working,
+  landscape-aware plugins. **Read these first**; copy their patterns.
 - `template/` — minimal skeletons to start from (the scaffold uses these).
 - `docs/ALLOWED_SYMBOLS.md` — the authoritative allowed-call list.
 - `docs/GETTING_STARTED.md` — the human walkthrough (point non-coders here).
