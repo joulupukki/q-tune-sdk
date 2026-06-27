@@ -48,6 +48,9 @@ Output: `build/phase.so` (the Docker build runs the validator automatically).
    `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
 2. Restart the device.
 3. Select "Phase" from Settings > Tuner UI.
+4. No guitar handy? Enable *Settings > Advanced > Developer Tools > Test Signal*
+   to drive the strobe with a built-in sweep through the six guitar strings (each
+   easing from off-pitch into tune). Turn it off again for live tuning.
 
 ## Plugin identity
 

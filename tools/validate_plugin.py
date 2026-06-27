@@ -98,12 +98,20 @@ def read_expected_abi() -> int:
 
 
 def read_allowlist() -> set:
-    """Pull every `identifier` inline-code token out of ALLOWED_SYMBOLS.md."""
+    """Pull every `identifier` inline-code token out of ALLOWED_SYMBOLS.md.
+
+    The allowlist is the heart of the symbol check; validating without it would
+    silently pass a plugin that calls unexported functions (and then fails to
+    load on the device). A missing allowlist is therefore a hard configuration
+    error, not a skippable warning.
+    """
     if not ALLOWED_DOC.exists():
         sys.stderr.write(
-            f"warning: {ALLOWED_DOC} not found — skipping symbol allowlist "
-            "check (generate it with tools/gen_plugin_symbols_doc.py).\n")
-        return set()
+            f"error: {ALLOWED_DOC} not found — cannot run the symbol allowlist "
+            "check. This file ships with the SDK; run the validator from a "
+            "complete q-tune-sdk checkout (or regenerate it with "
+            "tools/gen_plugin_symbols_doc.py).\n")
+        sys.exit(2)
     text = ALLOWED_DOC.read_text()
     return set(re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", text))
 
@@ -216,8 +224,12 @@ def main() -> int:
 
     expected_lvgl = EXPECTED_LVGL
     if args.lvgl:
-        maj, _, minr = args.lvgl.partition(".")
-        expected_lvgl = (int(maj), int(minr or 0))
+        m = re.fullmatch(r"(\d+)(?:\.(\d+))?", args.lvgl.strip())
+        if not m:
+            print(f"error: --lvgl must be MAJ or MAJ.MIN (e.g. 9.2), got "
+                  f"'{args.lvgl}'.", file=sys.stderr)
+            return 2
+        expected_lvgl = (int(m.group(1)), int(m.group(2) or 0))
 
     if not args.so.exists():
         print(f"FAIL: file not found: {args.so}")

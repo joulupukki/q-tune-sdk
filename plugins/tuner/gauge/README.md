@@ -80,6 +80,9 @@ rm -rf build && idf.py build
    `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
 2. Restart the device. The firmware loads plugins from `/data/plugins/` at boot.
 3. Select "Gauge" from Settings > Tuner UI on the device.
+4. No guitar handy? Enable *Settings > Advanced > Developer Tools > Test Signal*
+   to drive the needle with a built-in sweep through the six guitar strings (each
+   easing from off-pitch into tune). Turn it off again for live tuning.
 
 ## Plugin identity
 

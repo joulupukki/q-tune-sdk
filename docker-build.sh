@@ -45,6 +45,13 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+# Warn before the first build: pulling the pinned image is a multi-GB download
+# that can take several minutes, so it doesn't look like the build has hung.
+if ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
+  echo "note: ${IMAGE} isn't cached yet — this first build downloads it (a few GB)" >&2
+  echo "      and can take several minutes. Later builds reuse the cache and are fast." >&2
+fi
+
 echo "Building plugin in: ${PROJECT_DIR}"
 echo "Mounting SDK:       ${SDK_ROOT}  ->  /qtune-sdk (read-only)"
 echo "Using image:        ${IMAGE}"

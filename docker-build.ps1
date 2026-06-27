@@ -46,6 +46,14 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Warn before the first build: pulling the pinned image is a multi-GB download
+# that can take several minutes, so it doesn't look like the build has hung.
+docker image inspect $Image *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "note: $Image isn't cached yet — this first build downloads it (a few GB)"
+    Write-Host "      and can take several minutes. Later builds reuse the cache and are fast."
+}
+
 Write-Host "Building plugin in: $ProjectDir"
 Write-Host "Mounting SDK:       $SdkRoot  ->  /qtune-sdk (read-only)"
 Write-Host "Using image:        $Image"

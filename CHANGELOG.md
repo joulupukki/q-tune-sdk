@@ -30,7 +30,7 @@ plugins as relocatable `.so` modules the firmware loads at boot.
 - Touchscreen input via the standard LVGL event API
   (`lv_obj_add_event_cb` + `lv_event_get_indev` + `lv_indev_get_point`).
 - Curated LVGL allowlist — see [`docs/ALLOWED_SYMBOLS.md`](docs/ALLOWED_SYMBOLS.md)
-  (177 host symbols) plus standard libc/libm.
+  (217 exported symbols) plus standard libc/libm.
 
 ### Tooling
 - `docker-build.sh` (macOS/Linux) and `docker-build.ps1` (Windows/PowerShell) —

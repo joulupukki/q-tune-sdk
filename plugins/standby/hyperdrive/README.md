@@ -43,6 +43,10 @@ Output: `build/hyperdrive.so` (the Docker build runs the validator automatically
    `http://<device-ip>/plugins`. See [`docs/DEPLOY.md`](../../../docs/DEPLOY.md).
 2. Restart the device.
 3. Select "Hyperdrive" from Settings > Standby Screen.
+4. No guitar handy? Enable *Settings > Advanced > Developer Tools > Test Signal*
+   to feed the screen a built-in sweep through the six guitar strings, so
+   `display_frequency()` receives live note/cents data. Turn it off again for
+   normal use.
 
 ## Plugin identity
 

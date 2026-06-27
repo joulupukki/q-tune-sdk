@@ -128,6 +128,18 @@ After uploading, **restart your pedal** (power-cycle or Settings → Restart). T
 
 Select your plugin from the list. You'll see it immediately.
 
+## Test it without plugging in a guitar
+
+You don't need an instrument to see your plugin react. On the pedal, go to
+**Settings → Advanced → Developer Tools → Test Signal → On**. The tuner now plays
+a built-in demo signal: it cycles through the six open guitar strings, each one
+starting out of tune and gliding into the in-tune zone (with a brief silent pause
+between strings). It's the easiest way to watch your needle, strobe, or standby
+animation move through its whole range.
+
+Turn **Test Signal → Off** when you're done — the pedal won't tune a real
+instrument while it's on, and this setting stays on even after a power cycle.
+
 ## What to expect
 
 If your plugin works:

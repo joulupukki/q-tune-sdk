@@ -44,11 +44,22 @@ import sys
 SDK_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
+class InvalidName(ValueError):
+    """Raised when --name has no usable letters/digits to build an identifier."""
+
+
 def slugify(name: str) -> str:
-    """'Glow Needle!' -> 'glow_needle' (a valid C/CMake identifier)."""
+    """'Glow Needle!' -> 'glow_needle' (a valid C/CMake identifier).
+
+    Rejects names that normalize to nothing (empty, whitespace, or only
+    punctuation) rather than silently falling back to a shared default — two
+    such runs would otherwise collide on the same folder, prefix, and build tag.
+    """
     slug = re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")
     if not slug:
-        slug = "my_plugin"
+        raise InvalidName(
+            f"--name '{name}' has no letters or digits to build a project name "
+            "from. Pick a name like \"Glow Needle\".")
     if slug[0].isdigit():
         slug = "p_" + slug
     return slug
@@ -115,7 +126,11 @@ def main() -> int:
         print(f"ERROR: template not found: {template_dir}", file=sys.stderr)
         return 1
 
-    slug = slugify(args.name)
+    try:
+        slug = slugify(args.name)
+    except InvalidName as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     prefix = (args.prefix or derive_prefix(slug)).strip()
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", prefix):
         print(f"ERROR: invalid prefix '{prefix}'", file=sys.stderr)

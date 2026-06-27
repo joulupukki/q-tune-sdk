@@ -26,8 +26,9 @@ CONFIG_LV_USE_BUILTIN_STRING=y
 CONFIG_LV_USE_CLIB_SPRINTF=y
 
 # --- Widgets used by this example -----------------------------------------
+# The gauge needle is an lv_scale; the note/cents readout is an lv_label.
 CONFIG_LV_USE_LABEL=y
-CONFIG_LV_USE_ARC=y
+CONFIG_LV_USE_SCALE=y
 
 # --- Fonts used by this example -------------------------------------------
 # Montserrat 14 is the minimum (used by the ref-freq label).

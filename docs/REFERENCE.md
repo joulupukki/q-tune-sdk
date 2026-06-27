@@ -571,6 +571,20 @@ The selection is persisted to NVS by the firmware.
 **[`DEPLOY.md`](DEPLOY.md) has the full step-by-step** for both upload methods,
 restarting, replacing/deleting plugins, and viewing what's installed.
 
+### Testing without an instrument
+
+You can exercise a plugin without plugging in a guitar. On the pedal, enable
+*Settings > Advanced > Developer Tools > Test Signal*. The firmware then feeds the
+pitch pipeline a synthetic signal that cycles through the six open guitar strings
+(E2, A2, D3, G3, B3, E4); each string starts ~50–80 cents off and eases smoothly
+into the in-tune zone, with a short silent gap (reported as no pitch / `NOTE_NONE`)
+between strings. This drives your `display_frequency()` through its full range —
+off-pitch, in-tune, and idle — so you can confirm the UI reacts correctly.
+
+Turn it **off** to return to live input: real tuning is disabled while the test
+signal is active, and the setting persists across reboots (a deliberate
+convenience for repeated testing).
+
 ### Debugging
 
 `printf` output from your plugin goes to the serial console. The zero-install way

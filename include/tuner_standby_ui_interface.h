@@ -47,7 +47,6 @@ typedef struct {
     /// @param note_name The note name (e.g. A, B, C, etc.).
     /// @param octave The octave number of the detected note.
     /// @param cents The number of cents off from the note (e.g. -50, 0, 50).
-    /// should show the mute indicator (because of monitoring mode).
     void (*display_frequency)(float frequency, float target_frequency, TunerNoteName note_name, int octave, float cents);
 } TunerStandbyGUIInterface;
 

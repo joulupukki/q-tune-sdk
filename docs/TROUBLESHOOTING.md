@@ -147,6 +147,18 @@ static void on_tap(lv_event_t *e) {
 
 **Fix**: Call `qt_get_reference_frequency()`, `qt_get_note_name_palette()`, etc. inside `display_frequency()` so you pick up changes live.
 
+### My plugin loads, but I can't tell if it's reacting to pitch
+
+**Cause**: You don't have an instrument handy, or you want to watch the UI move
+through its whole range without playing perfectly in tune.
+
+**Fix**: Turn on the built-in demo signal: **Settings → Advanced → Developer
+Tools → Test Signal → On**. It feeds your plugin a sweep through the six guitar
+strings (each easing from off-pitch into tune, with short silent gaps between
+strings), so you can confirm `display_frequency()` is driving your UI. Remember
+to turn it back **Off** — normal tuning is disabled while it's active, and the
+setting persists across reboots.
+
 ### Plugin works on its own but crashes when I switch between plugins
 
 **Cause**: Your `cleanup()` callback isn't properly freeing resources (usually timers or animations).

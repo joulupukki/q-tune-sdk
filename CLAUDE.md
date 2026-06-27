@@ -373,6 +373,11 @@ see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 You cannot test rendering yourself (no emulator) — the user runs it on hardware.
 So make the build clean and the validation green, and give them a short
 "what you should see" description plus the install steps from `docs/DEPLOY.md`.
+Also tell them they can verify the plugin live **without an instrument** via
+**Settings → Advanced → Developer Tools → Test Signal → On** — a built-in pitch
+sweep through the six guitar strings, each easing from off-pitch into the in-tune
+zone — and to switch it **Off** afterward, since it blocks real tuning and
+persists across reboots.
 
 ---
 
