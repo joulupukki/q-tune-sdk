@@ -72,6 +72,16 @@ typedef struct {
     /// If you have any animations or timers running make sure to stop them
     /// here.
     void (*cleanup)(void);
+
+    /// @brief Position the reference-pitch indicator (optional).
+    ///
+    /// The firmware owns and draws the small reference-pitch (A4 / Hz) readout
+    /// that flashes briefly when the tuner loads and when the reference changes.
+    /// It passes the indicator object here so your tuner can place it — the same
+    /// pattern as align_settings_button(). Just position it with lv_obj_align()
+    /// (and optionally restyle it); do NOT delete it — the firmware owns it.
+    /// Leave this NULL to accept the firmware's default placement.
+    void (*align_reference_pitch_indicator)(lv_obj_t *indicator);
 } TunerGUIInterface;
 
 #endif

@@ -91,6 +91,9 @@ The UI library is **LVGL 9.2**.
    validator automatically** at the end (inside the container, which ships
    `pyelftools`), so a green build is already a validated `.so`. Read that output —
    if it reports an unexported symbol or version problem, fix it and rebuild.
+   **Warn the user that the *first* build is slow** — it downloads the pinned
+   ESP-IDF image (a few GB) plus components and can take several minutes; later
+   builds reuse the cache and finish in well under a minute.
 4. **Validate** — the build does this for you, but you can also run it standalone
    (e.g. to re-check a `.so` without rebuilding):
    ```sh
@@ -219,12 +222,14 @@ void         display_frequency(float frequency, float target_frequency,
                                float cents, bool show_mute_indicator);
 void         align_settings_button(lv_obj_t *btn);  // position the gear button
 void         cleanup(void);                // delete timers/anims; null pointers
+void         align_reference_pitch_indicator(lv_obj_t *indicator); // OPTIONAL: position the A4/Hz readout
 ```
 
-#### Tuner chrome: the readout, the mute indicator, and the settings button
+#### Tuner chrome: the readout, the mute indicator, the settings button, and the reference indicator
 
-Every tuner has three required pieces of "chrome." Users expect them to look and
-behave like the built-in tuners, so **follow `gauge` exactly** here:
+Every tuner has three required pieces of "chrome," plus one optional host-owned
+extra. Users expect them to look and behave like the built-in tuners, so
+**follow `gauge` exactly** here:
 
 - **The note + cents readout** — the heart of the tuner. Show the detected note
   (the glyph helpers `qt_get_note_glyph()` / `qt_get_sharp_glyph()`, or your own
@@ -241,6 +246,13 @@ behave like the built-in tuners, so **follow `gauge` exactly** here:
   clear of the top-left mute indicator. Place it where it won't collide with your
   readout — if you don't position it, it can land on top of your UI. Tapping it
   opens Settings; **don't attach your own handler.**
+- **The reference-pitch indicator (optional)** — the small A4/Hz readout the
+  firmware flashes when the tuner loads. The host *owns and draws* it and passes it
+  to your optional `align_reference_pitch_indicator(lv_obj_t *indicator)` — your
+  only job is to **position** it (and optionally restyle it), exactly like the
+  settings button. `gauge` puts it top-right in portrait, bottom-centre in landscape.
+  Omit the callback to accept the firmware's default placement; **never delete the
+  object** — the host owns it.
 
 ### Standby — `TunerStandbyGUIInterface`
 ```c

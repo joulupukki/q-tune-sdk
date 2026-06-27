@@ -41,6 +41,7 @@ static void         ph_display_frequency(float frequency,
                                                float cents,
                                                bool show_mute_indicator);
 static void         ph_align_settings_button(lv_obj_t *btn);
+static void         ph_align_reference_pitch_indicator(lv_obj_t *indicator);
 static void         ph_cleanup(void);
 
 static TunerGUIInterface ph_interface = {
@@ -50,6 +51,7 @@ static TunerGUIInterface ph_interface = {
     .display_frequency     = ph_display_frequency,
     .align_settings_button = ph_align_settings_button,
     .cleanup               = ph_cleanup,
+    .align_reference_pitch_indicator = ph_align_reference_pitch_indicator,
 };
 
 // --- Plugin descriptor + entry point (REQUIRED — do not remove) ------------
@@ -395,6 +397,16 @@ static void ph_display_frequency(float frequency,
 
 static void ph_align_settings_button(lv_obj_t *btn) {
     lv_obj_align(btn, LV_ALIGN_BOTTOM_RIGHT, -CORNER_MARGIN, -CORNER_MARGIN);
+}
+
+static void ph_align_reference_pitch_indicator(lv_obj_t *indicator) {
+    // The firmware owns this readout; we only place it. Top-right in portrait,
+    // bottom-left in landscape — clear of the note, mute, and settings button.
+    if (is_landscape) {
+        lv_obj_align(indicator, LV_ALIGN_BOTTOM_LEFT, CORNER_MARGIN, -CORNER_MARGIN);
+    } else {
+        lv_obj_align(indicator, LV_ALIGN_TOP_RIGHT, -CORNER_MARGIN, CORNER_MARGIN);
+    }
 }
 
 static void ph_cleanup(void) {

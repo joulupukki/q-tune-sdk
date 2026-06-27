@@ -99,6 +99,10 @@ Requires only [Docker](https://docs.docker.com/get-docker/) — works the same o
 the whole toolchain, and the build validates the `.so` for you, so you need no
 local ESP-IDF, Python, or `pyelftools`.
 
+The first build pulls that image (a few GB) and the LVGL / elf_loader components,
+so it can take several minutes; every later build reuses the cache and finishes in
+well under a minute.
+
 **macOS / Linux:**
 
 ```sh
@@ -452,6 +456,10 @@ firmware boots
     │
     ├── align_settings_button(btn)  ← called once after init. Position the
     │                                  gear button (e.g. bottom-right corner).
+    │
+    ├── align_reference_pitch_indicator(indicator)  ← OPTIONAL, called once after
+    │                                  init. Position the firmware's A4/Hz readout
+    │                                  (omit it to accept the default placement).
     │
     └── cleanup()             ← called when tuning mode exits or the user picks
                                  a different tuner. Delete timers/animations

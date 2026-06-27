@@ -20,15 +20,16 @@
  *     user's accent colour when in-tune.
  *   - A round lv_scale needle gauge whose needle sweeps left/right with cents
  *     deviation and turns the accent colour when in-tune.
- *   - A mute indicator (qt_get_mute_glyph()) in the top-LEFT corner, shown only
- *     while the host reports the signal is muted (show_mute_indicator), drawn in
- *     the user's selected note-name accent colour (qt_get_note_name_palette()).
+ *   - A mute indicator (qt_get_mute_glyph()) shown only while the host reports the
+ *     signal is muted (show_mute_indicator), drawn in the user's selected note-name
+ *     accent colour (qt_get_note_name_palette()). Top-LEFT in portrait, top-CENTRE
+ *     in landscape (where the note sits on the left).
  *   - The firmware's settings button — which is the Q-Tune logo — placed in the
  *     bottom-RIGHT corner via align_settings_button(). Tapping it opens settings.
- *
- * The reference pitch is intentionally NOT drawn here: the firmware shows its own
- * reference-pitch indicator (bottom-centre) when the tuner loads and when you
- * change it, so a plugin doesn't need to.
+ *   - The reference-pitch indicator — the small A4/Hz readout the firmware flashes
+ *     when the tuner loads. The firmware owns and draws it; the plugin only places
+ *     it via align_reference_pitch_indicator() (top-RIGHT in portrait, bottom-MID
+ *     in landscape), the same pattern as the settings button.
  *
  * The note/mute glyphs live in firmware flash; the plugin references them through
  * the host accessors rather than embedding its own image assets.
@@ -71,6 +72,7 @@ static void         ga_display_frequency(float frequency,
                                           float cents,
                                           bool show_mute_indicator);
 static void         ga_align_settings_button(lv_obj_t *btn);
+static void         ga_align_reference_pitch_indicator(lv_obj_t *indicator);
 static void         ga_cleanup(void);
 
 // ---------------------------------------------------------------------------
@@ -83,6 +85,7 @@ static TunerGUIInterface ga_interface = {
     .display_frequency     = ga_display_frequency,
     .align_settings_button = ga_align_settings_button,
     .cleanup               = ga_cleanup,
+    .align_reference_pitch_indicator = ga_align_reference_pitch_indicator,
 };
 
 // ---------------------------------------------------------------------------
@@ -170,7 +173,7 @@ static lv_coord_t ga_scale_size(void) {
 }
 
 // The user's selected note-name accent colour (Amber if they've not picked one).
-// Used for the in-tune highlight, the mute indicator, and the reference readout.
+// Used for the in-tune highlight and the mute indicator.
 static lv_color_t ga_accent_color(void) {
     lv_palette_t palette = qt_get_note_name_palette();
     return (palette == LV_PALETTE_NONE) ? lv_palette_main(LV_PALETTE_AMBER)
@@ -216,14 +219,19 @@ static void ga_init(lv_obj_t *screen) {
     lv_obj_align_to(s_sharp_img, s_note_img, LV_ALIGN_OUT_RIGHT_MID, -16, 0);
     lv_obj_add_flag(s_sharp_img, LV_OBJ_FLAG_HIDDEN);
 
-    // Mute indicator — top-left corner, recoloured red so it reads as a clear
-    // "signal muted" status. Hidden until the host reports a mute in
-    // display_frequency(). The mute glyph is a greyscale mask like the note art.
+    // Mute indicator — recoloured to the accent so it reads as a clear "signal
+    // muted" status. Hidden until the host reports a mute in display_frequency().
+    // Top-left in portrait; top-centre in landscape (the note sits on the left
+    // there, so the corner would crowd it).
     s_mute_img = lv_image_create(screen);
     lv_image_set_src(s_mute_img, qt_get_mute_glyph());
     lv_obj_set_style_img_recolor_opa(s_mute_img, LV_OPA_COVER, 0);
     lv_obj_set_style_img_recolor(s_mute_img, ga_accent_color(), 0);
-    lv_obj_align(s_mute_img, LV_ALIGN_TOP_LEFT, CORNER_MARGIN, CORNER_MARGIN);
+    if (is_landscape) {
+        lv_obj_align(s_mute_img, LV_ALIGN_TOP_MID, 0, CORNER_MARGIN);
+    } else {
+        lv_obj_align(s_mute_img, LV_ALIGN_TOP_LEFT, CORNER_MARGIN, CORNER_MARGIN);
+    }
     lv_obj_add_flag(s_mute_img, LV_OBJ_FLAG_HIDDEN);
 
     // Cents scale — round needle gauge, opposite the note: bottom edge in
@@ -332,6 +340,17 @@ static void ga_align_settings_button(lv_obj_t *btn) {
     // The host's settings button is the Q-Tune logo. Park it in the bottom-right
     // corner, clear of the mute indicator in the top-left.
     lv_obj_align(btn, LV_ALIGN_BOTTOM_RIGHT, -CORNER_MARGIN, -CORNER_MARGIN);
+}
+
+static void ga_align_reference_pitch_indicator(lv_obj_t *indicator) {
+    // The firmware owns and draws this readout; we only place it. Portrait:
+    // top-right. Landscape: bottom-centre — below the gauge, clear of the
+    // top-centre mute indicator and the bottom-right settings button.
+    if (is_landscape) {
+        lv_obj_align(indicator, LV_ALIGN_BOTTOM_MID, 0, -CORNER_MARGIN);
+    } else {
+        lv_obj_align(indicator, LV_ALIGN_TOP_RIGHT, -CORNER_MARGIN, CORNER_MARGIN);
+    }
 }
 
 static void ga_cleanup(void) {
