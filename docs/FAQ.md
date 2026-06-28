@@ -24,15 +24,28 @@ Building inside a WSL2 shell with `docker-build.sh` also works if you prefer it.
 Make sure your project lives on a drive Docker Desktop is allowed to share
 (*Settings → Resources → File sharing*; your user profile is shared by default).
 
-## Why can't my plugin use GPIO, NVS storage, Wi-Fi, the SD card, or raw audio/FFT?
+## Why can't my plugin use GPIO, Wi-Fi, the SD card, or raw audio/FFT?
 
 This is a deliberate API boundary, not a missing feature. Plugins are unsandboxed
 native code loaded into the firmware, so the host exposes a **small, stable
 surface**: the LVGL drawing API, pitch data (frequency, note, octave, cents), user
-settings, screen geometry, time, and randomness. Keeping the surface narrow is
-what lets plugins keep working across firmware updates and keeps a buggy plugin
-from bricking the pedal. If you think something essential is missing, ask on
+settings, screen geometry, time, randomness, and a small persistent key/value
+store (see the next question). Keeping the surface narrow is what lets plugins keep
+working across firmware updates and keeps a buggy plugin from bricking the pedal.
+If you think something essential is missing, ask on
 [Discord](https://discord.gg/evtjkEj9GX).
+
+## Can my plugin save state across reboots? (e.g. a digital pet)
+
+Yes — use the `qt_state_*()` API (see
+[`REFERENCE.md` → Persistent storage](REFERENCE.md)). It's a small NVS-backed
+key/value store: write a blob under a key, read it back next launch. You don't get
+raw NVS or filesystem access — the firmware owns the namespacing (private to your
+plugin by `uid`, or a shared author namespace) and quota. **One rule matters:**
+`set_*` is a cheap RAM write, but `commit()` writes flash, so never commit on every
+frame — batch your writes and commit sparingly (a slow timer; the firmware also
+auto-commits when you leave the screen). The `jamagotchi` sample shows the whole
+pattern.
 
 ## A function I want to call isn't in `ALLOWED_SYMBOLS.md`. Can I still use it?
 

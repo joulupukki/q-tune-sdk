@@ -5,7 +5,7 @@
 
 These are the **only** host symbols a Q-Tune plugin may reference. They are resolved by the firmware's ELF loader at load time; calling any other `lv_*` (or firmware) function leaves an unresolved relocation and the plugin will fail to load.
 
-Total exported symbols: **217**.
+Total exported symbols: **226**.
 
 In addition to the symbols below, standard C library functions (`printf`, `snprintf`, `memcpy`, `memset`, `malloc`, `free`, `strncpy`, …) and `<math.h>` functions (`fabsf`, `log2f`, `powf`, `roundf`, …) are available.
 
@@ -104,6 +104,10 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 ### Misc utilities
 
 `qt_uptime_ms`, `qt_random_u32`
+
+### Plugin persistent state
+
+`qt_state_set_blob`, `qt_state_get_blob`, `qt_state_has`, `qt_state_erase`, `qt_state_commit`, `qt_state_shared_set_blob`, `qt_state_shared_get_blob`, `qt_state_shared_erase`, `qt_state_shared_commit`
 
 ## LVGL fonts
 

@@ -23,7 +23,7 @@ curious or reading the [technical reference](REFERENCE.md).
 | **Symbol / allowlist** | A "symbol" is a function name in the compiled file. A plugin may only call the firmware functions on the [allowlist](ALLOWED_SYMBOLS.md). |
 | **Validator** | `tools/validate_plugin.py` — checks your built `.so` on your computer before you upload it, so problems show up early. |
 | **Scaffolder** | `tools/new_plugin.py` — creates a new, uniquely-named project for you (with a fresh `uid` and prefix). |
-| **NVS** | The pedal's small non-volatile storage, where it remembers which UI you selected (by `uid`). |
+| **NVS** | The pedal's small non-volatile storage. It remembers which UI you selected (by `uid`), and backs the `qt_state_*` store your plugin can use to save state across reboots. |
 | **Cents** | A fine measure of pitch: how flat (−) or sharp (+) a note is. 0 = perfectly in tune; the pedal gives your plugin this each frame. |
 | **In-tune window** | How close to 0 cents counts as "in tune" (the user sets this; default ±3 cents). |
 | **Tuner chrome** | The standard tuner furniture a plugin should draw: the note/cents readout, the mute indicator, and the settings (gear) button. |

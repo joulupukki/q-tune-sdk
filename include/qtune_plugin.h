@@ -15,7 +15,8 @@
 //   4. tuner_ui_interface.h        — TunerGUIInterface (for tuner plugins)
 //   5. tuner_standby_ui_interface.h — TunerStandbyGUIInterface (for standby plugins)
 //   6. qtune_plugin_host_api.h     — screen_width/height, qt_get_*() accessors
-//   7. qtune_plugin_abi.h          — QTunePluginDescriptor, QTUNE_PLUGIN_EXPORT, ID ranges
+//   7. qtune_plugin_state_api.h    — qt_state_*() persistent storage (save state)
+//   8. qtune_plugin_abi.h          — QTunePluginDescriptor, QTUNE_PLUGIN_EXPORT, ID ranges
 //
 // IMPORTANT: NOT ALL LVGL FUNCTIONS ARE EXPORTED
 // ---------------------------------------------------
@@ -68,6 +69,9 @@
 
 // Host API: screen geometry globals and qt_get_*() accessors.
 #include "qtune_plugin_host_api.h"
+
+// Persistent storage: qt_state_*() save/load (NVS-backed; commit sparingly).
+#include "qtune_plugin_state_api.h"
 
 // ABI descriptor type, QTUNE_PLUGIN_EXPORT, and reserved ID macros.
 #include "qtune_plugin_abi.h"

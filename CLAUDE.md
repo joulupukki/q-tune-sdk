@@ -75,11 +75,13 @@ The UI library is **LVGL 9.2**.
    project there is gitignored, so the user's work stays separate from the SDK and
    survives a `git pull` to update the SDK. (The bundled samples that ship with the
    SDK — `plugins/tuner/gauge`, `plugins/tuner/phase`, `plugins/standby/bouncer`,
-   `plugins/standby/hyperdrive` — are the exceptions that *are* tracked.)
+   `plugins/standby/hyperdrive`, `plugins/standby/jamagotchi` — are the exceptions
+   that *are* tracked.)
 2. **Write the UI** by editing the project's `main/<name>.cpp` — implement the
    interface callbacks (see "The two interfaces" below). Reuse patterns from the
    bundled samples: `plugins/tuner/gauge` and `plugins/standby/bouncer` (and the
-   flashier `plugins/tuner/phase` / `plugins/standby/hyperdrive`).
+   flashier `plugins/tuner/phase` / `plugins/standby/hyperdrive`, or
+   `plugins/standby/jamagotchi` for saving state with `qt_state_*`).
 3. **Build** (Docker, no local toolchain needed):
    ```sh
    ./docker-build.sh plugins/tuner/glow_needle     # macOS / Linux
@@ -315,6 +317,14 @@ wants.
 - **Time**: `qt_uptime_ms()` — monotonic milliseconds since boot, for animation
   and elapsed-time logic ("how long has this note been held?").
 - **Randomness**: `qt_random_u32()` — for particles, jitter, quiz prompts.
+- **Saving state (persists across reboots)**: `qt_state_*()` — a small NVS-backed
+  key/value store so a plugin can remember things between sessions and power
+  cycles (a digital-pet's hunger/mood, a high score, the last selected mode).
+  Private per-plugin by default (`qt_state_set_blob` / `qt_state_get_blob` /
+  `qt_state_has` / `qt_state_erase` / `qt_state_commit`), with an opt-in
+  author-namespaced shared store (`qt_state_shared_*`) so a tuner + standby pair
+  can share one pet. **See "Saving state" below — `commit()` writes flash and must
+  never be called per frame.**
 - **Touch input**: the screen is touch-capable. React to taps by adding an event
   callback to an object — see "Reacting to touch" below.
 - **Standard C / math**: `printf` (goes to the serial monitor — your only debug
@@ -323,9 +333,10 @@ wants.
 
 ### Boundaries (don't attempt — these aren't exposed, by design)
 Raw audio samples / FFT / spectrum data (you get pitch + note + cents, which is
-enough); the filesystem / SD card; Wi-Fi or networking; NVS storage; GPIO or
-hardware registers; `esp_log_*` (use `printf`). If a user asks for something here,
-explain the boundary — it's a deliberate, safe API edge, not a bug.
+enough); the filesystem / SD card; Wi-Fi or networking; raw NVS / flash (use the
+controlled `qt_state_*()` store instead — see "Saving state"); GPIO or hardware
+registers; `esp_log_*` (use `printf`). If a user asks for something here, explain
+the boundary — it's a deliberate, safe API edge, not a bug.
 
 ---
 
@@ -348,6 +359,53 @@ lv_obj_add_event_cb(screen, on_tap, LV_EVENT_PRESSED, NULL);
 
 Use `LV_EVENT_PRESSED` for a touch-down, `LV_EVENT_CLICKED` for a tap-release.
 `bouncer` demonstrates a touch-reactive behavior end to end.
+
+---
+
+## Saving state (persistent storage)
+
+When a plugin needs to remember something across sessions and power cycles — a
+digital pet's hunger/mood, a high score, the last-selected mode — use the
+controlled `qt_state_*()` store (declared in `qtune_plugin_state_api.h`, pulled in
+by `qtune_plugin.h`). It is a small key/value store the firmware backs with NVS;
+plugins never touch NVS or flash directly. The `jamagotchi` sample uses it.
+
+```c
+typedef struct { uint8_t hunger; uint8_t mood; uint32_t last_fed_ms; } Pet;
+
+// In init(): load, or start fresh on first run.
+static Pet s_pet;
+if (qt_state_get_blob("pet", &s_pet, sizeof s_pet) != (int32_t)sizeof s_pet) {
+    s_pet = (Pet){ .hunger = 50, .mood = 80, .last_fed_ms = 0 };  // first run
+}
+
+// While running: mutate s_pet freely in RAM (cheap). When state meaningfully
+// changed, stage it and commit at a checkpoint — NOT every frame.
+qt_state_set_blob("pet", &s_pet, sizeof s_pet);
+qt_state_commit();
+```
+
+Apply these rules every time you use it:
+
+- **`commit()` writes flash — never per frame.** `display_frequency()` runs
+  ~30×/second; committing there would wear out the flash in days. `set_*()` only
+  updates a RAM cache; `commit()` persists it. Commit *sparingly* — on a slow
+  `lv_timer` (tens of seconds / minutes) and/or only when state actually changed.
+  The firmware auto-commits pending writes after `cleanup()` returns, so leaving
+  the screen never loses data; you don't need a commit in `cleanup()`.
+- **Always handle first run.** A missing key means "no saved state yet" — seed
+  sensible defaults; never assume a prior value exists.
+- **Private vs shared.** `qt_state_*()` is private to your plugin (keyed by your
+  `uid`). To share *one* pet between a tuner and a standby plugin, use
+  `qt_state_shared_*()` with a stable, globally-unique reverse-DNS namespace (e.g.
+  `"com.yourname.jamagotchi"`).
+- **Keep it small.** Per-value cap `QT_STATE_VALUE_MAX` (4096 B); per-namespace
+  quota `QT_STATE_QUOTA` (8192 B). Pet state is tens of bytes — design for small.
+- **uid stability still applies (Hard rule #5).** Data is keyed by `uid`, so
+  changing the uid after publishing *also* orphans the saved data.
+- **Cleanup is automatic.** Deleting a plugin reclaims its data at the next boot;
+  a crash-disabled plugin (`.so.disabled`) keeps its data. The user can wipe a
+  still-installed plugin's data via *Settings → Plugin Data*.
 
 ---
 
@@ -383,8 +441,9 @@ persists across reboots.
 
 ## Reference material in this repo
 
-- `plugins/tuner/gauge/`, `plugins/tuner/phase`, `plugins/standby/bouncer/`, and `plugins/standby/hyperdrive` — complete, working,
-  landscape-aware plugins. **Read these first**; copy their patterns.
+- `plugins/tuner/gauge/`, `plugins/tuner/phase`, `plugins/standby/bouncer/`,
+  `plugins/standby/hyperdrive`, and `plugins/standby/jamagotchi` (saving state) —
+  complete, working, landscape-aware plugins. **Read these first**; copy their patterns.
 - `template/` — minimal skeletons to start from (the scaffold uses these).
 - `docs/ALLOWED_SYMBOLS.md` — the authoritative allowed-call list.
 - `docs/GETTING_STARTED.md` — the human walkthrough (point non-coders here).

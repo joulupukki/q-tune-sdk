@@ -237,7 +237,8 @@ q-tune-sdk/
         │       ├── bouncer.cpp     Implements TunerStandbyGUIInterface
         │       ├── CMakeLists.txt
         │       └── idf_component.yml
-        └── hyperdrive/             Complete IDF project → hyperdrive.so (warp starfield)
+        ├── hyperdrive/             Complete IDF project → hyperdrive.so (warp starfield)
+        └── jamagotchi/             Complete IDF project → jamagotchi.so (digital pet; saves state)
 ```
 
 > `new_plugin.py` scaffolds your own projects into `plugins/<type>/` alongside
@@ -401,6 +402,15 @@ before you upload. A few high-value gotchas:
 | `qt_uptime_ms()` | `uint32_t` | Monotonic milliseconds since boot — for animation / elapsed-time |
 | `qt_random_u32()` | `uint32_t` | Hardware random number — for particles, jitter, quiz prompts |
 
+**Persistent storage (`qtune_plugin_state_api.h`).** A small key/value store the
+firmware backs with NVS, so a plugin can remember state across sessions and power
+cycles (e.g. a digital pet). `qt_state_set_blob` / `qt_state_get_blob` /
+`qt_state_has` / `qt_state_erase` / `qt_state_commit` are private to your plugin
+(keyed by `uid`); the `qt_state_shared_*` variants take an author-namespace string
+so a tuner + standby pair can share one record. **`set_*` is a cheap RAM write;
+`commit()` writes flash — never call it per frame.** See "Persistent storage"
+below.
+
 **Touch input.** The pedal has a touchscreen. React to taps by adding an event
 callback: `lv_obj_add_event_cb(obj, cb, LV_EVENT_PRESSED, NULL)`, then inside the
 callback read the point with `lv_event_get_indev(e)` + `lv_indev_get_point(...)`.
@@ -412,10 +422,46 @@ See [`TOUCH.md`](TOUCH.md).
 `strncpy`, etc.) and `<math.h>` functions (`fabsf`, `log2f`, `powf`, `roundf`,
 etc.) are available.
 
+### Persistent storage (`qtune_plugin_state_api.h`)
+
+Plugins can save a little state that survives both leaving the screen and a full
+power cycle — backed by the pedal's NVS flash, but through a controlled key/value
+API rather than raw NVS access. Use it for a digital pet, a high score, or the
+last-selected mode.
+
+| Symbol | Returns | Description |
+|--------|---------|-------------|
+| `qt_state_set_blob(key, data, len)` | `qt_state_result_t` | Stage a value in the RAM cache (private to this plugin) |
+| `qt_state_get_blob(key, out, out_cap)` | `int32_t` | Bytes read (≥0), or a negative `qt_state_result_t` on error |
+| `qt_state_has(key)` | `bool` | True if a value is stored under `key` |
+| `qt_state_erase(key)` | `qt_state_result_t` | Remove `key` (persisted on next commit) |
+| `qt_state_commit()` | `qt_state_result_t` | Flush pending writes to flash — **expensive; not per frame** |
+| `qt_state_shared_set_blob(ns, key, data, len)` | `qt_state_result_t` | Like `set_blob`, in a shared author namespace `ns` |
+| `qt_state_shared_get_blob(ns, key, out, out_cap)` | `int32_t` | Like `get_blob`, from namespace `ns` |
+| `qt_state_shared_erase(ns, key)` / `qt_state_shared_commit(ns)` | `qt_state_result_t` | Erase / commit in namespace `ns` |
+
+Rules and limits:
+
+- **Never `commit()` per frame.** `display_frequency()` runs ~30×/second and NVS
+  lives in finite-write flash; committing there wears it out fast. `set_*` only
+  touches a RAM cache — `commit()` writes flash. Commit on a *slow* `lv_timer`
+  and/or only when state changed. The firmware also auto-commits after `cleanup()`.
+- **Handle first run.** A missing key means no saved state yet — seed defaults.
+- **Private vs shared.** Private data is keyed by your `uid`; shared data is keyed
+  by a stable, globally-unique reverse-DNS `ns` (e.g. `"com.you.jamagotchi"`) so a
+  tuner + standby pair can share one record. There is no access control on shared
+  namespaces — keep yours unique.
+- **Limits.** `QT_STATE_VALUE_MAX` = 4096 B per value, `QT_STATE_QUOTA` = 8192 B
+  per namespace, key ≤ `QT_STATE_KEY_MAX` (32) chars.
+- **Cleanup.** Deleting a plugin reclaims its private data at the next boot; a
+  crash-disabled plugin (`.so.disabled`) keeps its data. *Settings → Plugin Data*
+  wipes a still-installed plugin's data on demand. Because data is keyed by `uid`,
+  changing the uid after publishing orphans it (see §6).
+
 ### What is NOT available
 
 - Direct hardware register access or GPIO control.
-- NVS (non-volatile storage) read/write.
+- Raw NVS / flash / filesystem access — use the controlled `qt_state_*` store above.
 - Wi-Fi or network sockets.
 - `esp_log_*` functions (use `printf` for debug output — it goes to the serial
   monitor).

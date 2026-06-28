@@ -13,7 +13,7 @@ Licensed under **Apache-2.0** (see [`LICENSE`](LICENSE)) — you're free to buil
 ## What you can build
 
 Two kinds of plugin: a **tuner** (the active display while you tune) or a **standby
-screen** (what the pedal shows when idle). The SDK ships four complete, working
+screen** (what the pedal shows when idle). The SDK ships five complete, working
 samples to reference:
 
 | Sample | Kind | What it looks like |
@@ -22,6 +22,7 @@ samples to reference:
 | [`phase`](plugins/tuner/phase) | Tuner | Scrolling strobe stripes that freeze the instant you're in tune |
 | [`bouncer`](plugins/standby/bouncer) | Standby | A dot bouncing around the screen; tap to send it somewhere |
 | [`hyperdrive`](plugins/standby/hyperdrive) | Standby | A warp-speed starfield that boosts when you tap or play |
+| [`jamagotchi`](plugins/standby/jamagotchi) | Standby | A digital pet that you feed by tapping — and that remembers its state across reboots (saving state) |
 
 Anything you can draw with [LVGL](https://lvgl.io) (gauges, meters, animations,
 pixel art, touch reactions) is fair game.

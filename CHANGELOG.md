@@ -26,10 +26,15 @@ plugins as relocatable `.so` modules the firmware loads at boot.
 - Note artwork: `qt_get_note_glyph`, `qt_get_sharp_glyph`, `qt_get_blank_glyph`,
   `qt_note_is_sharp`, and `qt_get_mute_glyph`.
 - Utilities: `qt_uptime_ms` (monotonic time) and `qt_random_u32` (randomness).
+- Persistent state: `qt_state_*` — a small NVS-backed key/value store so plugins
+  can save state across reboots (e.g. a digital pet). Private per-plugin by `uid`
+  (`qt_state_set_blob` / `get_blob` / `has` / `erase` / `commit`) plus opt-in
+  author-namespaced shared storage (`qt_state_shared_*`). Writes are RAM-cached;
+  `commit` flushes to flash and must not be called per frame (flash wear).
 - Touchscreen input via the standard LVGL event API
   (`lv_obj_add_event_cb` + `lv_event_get_indev` + `lv_indev_get_point`).
 - Curated LVGL allowlist — see [`docs/ALLOWED_SYMBOLS.md`](docs/ALLOWED_SYMBOLS.md)
-  (217 exported symbols) plus standard libc/libm.
+  (226 exported symbols) plus standard libc/libm.
 
 ### Tooling
 - `docker-build.sh` (macOS/Linux) and `docker-build.ps1` (Windows/PowerShell) —
@@ -51,9 +56,10 @@ plugins as relocatable `.so` modules the firmware loads at boot.
 - `CLAUDE.md` for AI-assisted plugin authoring with Claude Code.
 - Bundled sample projects under `plugins/`, organized by type: tuners
   `plugins/tuner/gauge` (needle gauge) and `plugins/tuner/phase` (strobe-style);
-  standby screens `plugins/standby/bouncer` (bouncing dot, touch-enabled) and
-  `plugins/standby/hyperdrive` (warp starfield). `new_plugin.py` scaffolds your
-  own projects alongside them in `plugins/<type>/` (gitignored).
+  standby screens `plugins/standby/bouncer` (bouncing dot, touch-enabled),
+  `plugins/standby/hyperdrive` (warp starfield), and `plugins/standby/jamagotchi`
+  (a digital pet demonstrating persistent state via `qt_state_*`). `new_plugin.py`
+  scaffolds your own projects alongside them in `plugins/<type>/` (gitignored).
 - `template/tuner` and `template/standby` starter skeletons.
 - Guides: Getting Started, Deploy, Touch, Monitor, Troubleshooting, FAQ, and a
   Glossary, plus the Allowed Symbols reference and the full README/REFERENCE.

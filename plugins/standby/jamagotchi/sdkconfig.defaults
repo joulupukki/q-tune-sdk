@@ -1,0 +1,28 @@
+# sdkconfig.defaults — Jamagotchi standby plugin
+#
+# These mirror the firmware's LVGL configuration so the compiled .so shares the
+# same struct layouts as the firmware. DO NOT change CONFIG_LV_COLOR_DEPTH.
+
+# --- Color depth: 16-bit RGB565 — MANDATORY, must match firmware ----------
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_COLOR_DEPTH=16
+
+# --- OS integration: FreeRTOS ---------------------------------------------
+CONFIG_LV_OS_FREERTOS=y
+CONFIG_LV_USE_OS=2
+
+# --- Memory management ----------------------------------------------------
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_BUILTIN_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+
+# --- Widgets / fonts: enable what your plugin uses ------------------------
+# Jamagotchi draws the pet/UI from labels + plain lv_obj primitives (no images).
+# Fonts: 14 (stats/buttons), 18 (header), 40 (note prompt / emote overlay).
+CONFIG_LV_USE_LABEL=y
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_MONTSERRAT_18=y
+CONFIG_LV_FONT_MONTSERRAT_40=y
+
+# --- Shared object support (required) -------------------------------------
+CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=y
