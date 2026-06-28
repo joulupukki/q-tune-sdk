@@ -393,6 +393,7 @@ before you upload. A few high-value gotchas:
 | `qt_get_reference_frequency()` | `int32_t` | A4 reference pitch in Hz (default 440) |
 | `qt_get_in_tune_cents_width()` | `uint8_t` | Half-width of in-tune window in cents (default 3) |
 | `qt_get_monitoring_mode()` | `uint8_t` | Non-zero when monitoring mode is active |
+| `qt_get_bypass_type()` | `TunerBypassType` | `tunerBypassTypeTrue` (relay; no signal reaches the tuner) or `tunerBypassTypeBuffered` (signal buffered through, pitch stays available) |
 | `qt_get_note_name_palette()` | `lv_palette_t` | User's accent colour (`LV_PALETTE_NONE` = amber retro) |
 | `qt_get_show_cents()` | `uint8_t` | Non-zero when the user wants the cents value shown |
 | `qt_get_note_glyph(note, size)` | `const lv_image_dsc_t *` | Built-in note letter artwork (A–G / blank); pair with `qt_get_sharp_glyph()` |

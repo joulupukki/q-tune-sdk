@@ -34,6 +34,11 @@ int32_t      qt_get_reference_frequency(void);
 uint8_t      qt_get_in_tune_cents_width(void);
 // Non-zero when monitoring mode (buffered bypass + monitoring) is enabled.
 uint8_t      qt_get_monitoring_mode(void);
+// Current output bypass type: tunerBypassTypeTrue (mechanical/relay bypass — the
+// tuner & standby screens receive no signal, so no pitch is detected) or
+// tunerBypassTypeBuffered (signal is buffered through, so pitch stays available
+// even when not actively tuning). See TunerBypassType in tuner_math.h.
+TunerBypassType qt_get_bypass_type(void);
 // User's chosen note-name color palette (LV_PALETTE_NONE => retro/amber scheme).
 lv_palette_t qt_get_note_name_palette(void);
 // Non-zero when the user wants the cents value displayed.

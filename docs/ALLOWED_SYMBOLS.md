@@ -95,7 +95,7 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 ### User-setting read-only accessors
 
-`qt_get_reference_frequency`, `qt_get_in_tune_cents_width`, `qt_get_monitoring_mode`, `qt_get_note_name_palette`, `qt_get_show_cents`
+`qt_get_reference_frequency`, `qt_get_in_tune_cents_width`, `qt_get_monitoring_mode`, `qt_get_bypass_type`, `qt_get_note_name_palette`, `qt_get_show_cents`
 
 ### Note-name glyph image accessors
 

@@ -110,6 +110,7 @@ static bool      s_saw_silence = false;
 static lv_obj_t *s_pet_cont = NULL;                                   // clickable, bobs
 static lv_obj_t *s_img_body = NULL, *s_img_face = NULL, *s_img_hair = NULL;
 static lv_obj_t *s_speech = NULL, *s_hint = NULL;
+static lv_obj_t *s_call_note_lbl = NULL;   // the big, readable note to play while calling
 static jama_call_t s_call = JAMA_CALL_NONE;
 static uint8_t   s_call_note = NC_E;
 static uint32_t  s_call_since_ms = 0;
@@ -250,6 +251,7 @@ static void go_scene(jam_scene_t sc) {
     s_saw_silence = false;
     s_busy = false; s_resume_at = 0;
     s_pet_cont = s_img_body = s_img_face = s_img_hair = s_speech = s_hint = NULL;
+    s_call_note_lbl = NULL;
     s_gnote = s_gprog = s_ginstr = s_gbox_note = s_g1 = s_g2 = s_g3 = s_g4 = NULL;
     for (int i = 0; i < 4; i++) { s_choice[i] = NULL; s_disabled[i] = false; }
     for (int i = 0; i < CROSS_LANES; i++) s_car[i] = NULL;
@@ -370,11 +372,13 @@ static int pet_mood(void) {
 
 static int pet_frame(int mood, uint32_t now) {
     switch (mood) {
-        // Frame 0 is eyes-open; frame 1 is the closed-eye blink/wink. Show frame 1
-        // only as a brief flash so the eyes don't strobe.
+        // Frame 0 is the resting face; frame 1 is the closed-eye blink for neutral
+        // (shown briefly) and the growing Zzz for asleep.
         case MOOD_NEUTRAL: return (now < s_blink_until) ? 1 : 0;        // occasional blink
-        case MOOD_HAPPY:   return ((now % 1800u) >= 1560u) ? 1 : 0;     // brief wink ~every 1.8s
         case MOOD_ASLEEP:  return (int)((now / 700u) % 2u);            // Zzz pulses (eyes stay shut)
+        // MOOD_HAPPY holds frame 0 (steady ^_^): the 2-frame wink read as a glitchy
+        // "one eye pops open" during the bob, so we keep the happy face still and let
+        // the body bounce carry the motion.
         default:           return 0;
     }
 }
@@ -467,13 +471,23 @@ static void build_pet(void) {
     apply_pet_art(true);   // set real sprites + colors now so nothing flashes white
 
     s_speech = lv_label_create(s_root);
-    lv_obj_set_style_text_font(s_speech, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(s_speech, is_landscape ? &lv_font_montserrat_14 : &lv_font_montserrat_18, 0);
     lv_obj_set_style_text_color(s_speech, lv_color_white(), 0);
     lv_obj_set_style_text_align(s_speech, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_long_mode(s_speech, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(s_speech, lv_pct(90));
-    lv_obj_align(s_speech, LV_ALIGN_TOP_MID, 0, pet_top + PET_SIZE + (is_landscape ? 8 : 16));
+    lv_obj_align(s_speech, LV_ALIGN_TOP_MID, 0, pet_top + PET_SIZE + (is_landscape ? 2 : 8));
     lv_label_set_text(s_speech, "");
+
+    // The note to play, shown BIG (so it's readable across a room with the pedal
+    // on the floor). Only populated while the pet is calling; empty otherwise.
+    s_call_note_lbl = lv_label_create(s_root);
+    lv_obj_set_style_text_font(s_call_note_lbl,
+        is_landscape ? &lv_font_montserrat_40 : &lv_font_montserrat_48, 0);
+    lv_obj_set_style_text_color(s_call_note_lbl, accent_color(), 0);
+    lv_obj_set_style_text_align(s_call_note_lbl, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(s_call_note_lbl, LV_ALIGN_TOP_MID, 0, pet_top + PET_SIZE + (is_landscape ? 22 : 32));
+    lv_label_set_text(s_call_note_lbl, "");
 
     s_hint = lv_label_create(s_root);
     lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_14, 0);
@@ -514,19 +528,28 @@ static void update_pet(void) {
         if (dead) lv_label_set_text(s_speech, "Your pet has passed on.\nTap to start a new egg.");
         else if (s_pet.sleeping) lv_label_set_text(s_speech, "Zzz...");
         else if (calling) {
-            // Always offer BOTH ways to respond: play the note, or tap.
-            char m[64];
-            snprintf(m, sizeof m, "I'm %s!\nPlay %s  (or tap me)", jama_call_word(s_call), NOTE_TXT[s_call_note]);
+            // The need; the note itself is shown big below, the "how" goes in s_hint.
+            char m[32];
+            snprintf(m, sizeof m, "I'm %s!", jama_call_word(s_call));
             lv_label_set_text(s_speech, m);
         } else lv_label_set_text(s_speech, jama_stage_name(s_pet.stage));
     }
+    // The big, readable note to play (accent colored) — only while calling.
+    if (s_call_note_lbl) lv_label_set_text(s_call_note_lbl, calling ? NOTE_TXT[s_call_note] : "");
     if (s_hint) {
-        // Only nudge about Buffered Bypass when we're calling, haven't actually
-        // heard the guitar, AND monitoring/buffered-bypass isn't already enabled
-        // (if it is, the tip is wrong — the pet simply hasn't been played yet).
-        bool monitoring = qt_get_monitoring_mode() != 0;
-        lv_label_set_text(s_hint, (calling && !pitch_available() && !monitoring)
-            ? "Tip: enable Buffered Bypass" : "");
+        // Only nudge about Buffered Bypass when the pet genuinely can't hear the
+        // guitar: i.e. we're calling, haven't heard a note recently, AND the output
+        // is in true (relay) bypass with monitoring off. If buffered bypass or
+        // monitoring is on, the signal reaches us — the tip would be wrong (the pet
+        // simply hasn't been played yet). Otherwise, while calling, show how to respond.
+        bool can_hear = (qt_get_bypass_type() == tunerBypassTypeBuffered)
+                        || (qt_get_monitoring_mode() != 0);
+        if (calling && !pitch_available() && !can_hear)
+            lv_label_set_text(s_hint, "Tip: enable Buffered Bypass");
+        else if (calling)
+            lv_label_set_text(s_hint, "play it, or tap me");
+        else
+            lv_label_set_text(s_hint, "");
     }
 
     // Always arm the play-the-note path while calling (harmless if no signal).
@@ -1248,6 +1271,7 @@ static void jam_cleanup(void) {
     qt_state_set_blob(JAM_STATE_KEY, &s_pet, sizeof s_pet);
     s_screen = NULL; s_root = NULL;
     s_pet_cont = s_img_body = s_img_face = s_img_hair = s_speech = s_hint = NULL;
+    s_call_note_lbl = NULL;
     s_gnote = s_gprog = s_ginstr = s_gbox_note = s_g1 = s_g2 = s_g3 = s_g4 = NULL;
     for (int i = 0; i < 4; i++) s_choice[i] = NULL;
     for (int i = 0; i < CROSS_LANES; i++) s_car[i] = NULL;
