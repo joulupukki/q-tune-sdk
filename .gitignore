@@ -14,6 +14,9 @@
 **/__pycache__/
 *.pyc
 
+# Internal release-testing checklist (kept local, not shipped in the SDK).
+RELEASE_CHECKLIST.md
+
 # The bundled sample plugins under plugins/tuner/ and plugins/standby/ ARE
 # tracked. Your own scaffolded projects land alongside them — new_plugin.py drops
 # a new project into plugins/<type>/ — and those stay OUT of the SDK repo, so your

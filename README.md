@@ -22,7 +22,7 @@ samples to reference:
 | [`phase`](plugins/tuner/phase) | Tuner | Scrolling strobe stripes that freeze the instant you're in tune |
 | [`bouncer`](plugins/standby/bouncer) | Standby | A dot bouncing around the screen; tap to send it somewhere |
 | [`hyperdrive`](plugins/standby/hyperdrive) | Standby | A warp-speed starfield that boosts when you tap or play |
-| [`jamagotchi`](plugins/standby/jamagotchi) | Standby | A digital pet that you feed by tapping — and that remembers its state across reboots (saving state) |
+| [`jamagotchi`](plugins/standby/jamagotchi) | Standby | An interactive digital pet that remembers its state across reboots (proof-of-concept for saving state) |
 
 Anything you can draw with [LVGL](https://lvgl.io) (gauges, meters, animations,
 pixel art, touch reactions) is fair game.

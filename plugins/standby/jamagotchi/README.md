@@ -8,12 +8,13 @@ features — **persistent state** (`qt_state_*`), **live pitch in standby**
 ## How it plays (the loop)
 
 Like a real Tamagotchi, the pet **hides its meters** and just lives on the idle
-screen. Over time a hidden need (hunger, fun, cleanliness, health) drifts down and
-the pet **calls for attention** with a speech bubble:
+screen. Over time a hidden need (hunger, fun, cleanliness, health, focus) drifts
+down and the pet **calls for attention** — it shows what's wrong and a **big note
+to play** (picked at random each call, drawn large so it reads across the room):
 
-> *"I'm hungry! Play E to feed me."*
+> *"I'm hungry!"* — with a large **C#** shown below, then *"play it, or tap me."*
 
-You answer by **playing the prompted note** (through buffered bypass) or, with no
+You answer by **playing that note** (through buffered bypass) or, with no
 guitar, by **tapping** the pet. That launches a short **full-screen mini-game**; the
 score you get **proportionally fills** the need (70% → +70%). Ignore a call too long
 and it becomes a **care mistake** — enough of those and the pet grows up into a
@@ -28,27 +29,30 @@ status screen) and **Games** (replay any mini-game for a small, capped reward).
 
 Each leans on a different thing pitch can tell us, and each has a **touch fallback**:
 
-| Game | Need | Play it with pitch | …or touch |
+| Game (in-app title) | Need | Play it with pitch | …or touch |
 |------|------|--------------------|-----------|
-| **Note Match** | Feed | Play the shown note in tune | Tap the matching note |
-| **Note Runner** | Jam | A **note attack** makes the pet jump obstacles | Tap to jump |
-| **Pitch Steer** | Clean | **Low notes → left, high → right** to sweep the mess | Tap where to move |
-| **Road Dash** | Heal | Hop the pet up across lanes of traffic — **a note attack hops it forward**; dodge the cars | Tap to hop |
-| **Echo** | Settle | Tiles flip to reveal a 4-note sequence, then flip back; **play the pad notes in order** to fill them (Wordle-style) | Tap the pad in order |
+| **Feed time!** | hunger | Play the shown note (matched by name) from four choices | Tap the matching note |
+| **Jam Run!** | fun | Play the note shown on the runner to jump each obstacle | Tap to jump |
+| **Tidy up!** | cleanliness | Play each speck's labelled note to clear it | Tap the speck |
+| **Road Dash!** | health | A **note attack** hops the pet up one lane — dodge the traffic | Tap to hop |
+| **Echo!** | focus | Watch a 4-note sequence, then **play the pad notes back in order** (Wordle-style) | Tap the pad in order |
 
 ### Pitch-selectable menus
 
 Every choice (the call prompt, the results screen's **Try Again / Continue**, the
 **Games** menu) can be picked by **playing an assigned note** or tapping. The Games
 menu maps to the open strings (**Feed = E, Jam = A, Clean = D, Heal = G, Echo = B**);
-two-button screens use **Continue = E, Try Again = A**. There's a brief input
-lockout after each screen change so the note you just played doesn't auto-select.
+the two-button result screen uses deliberate fretted notes — **Try Again = A#,
+Continue = F** — so an accidental open string doesn't trigger them. There's a brief
+input lockout after each screen change so the note you just played doesn't auto-select.
 
 ## Buffered bypass
 
-The pet "hears" your guitar via `display_frequency`, which delivers notes reliably in
-**Buffered Bypass**. If no notes are arriving it shows a *"works best in Buffered
-Bypass"* tip and you can do everything by **touch**.
+The pet "hears" your guitar via `display_frequency`, which delivers notes in
+**Buffered Bypass**. When the pedal is in **true bypass** (no signal reaches the
+tuner, detected via `qt_get_bypass_type()`) and the pet is calling, it shows a
+*"Tip: enable Buffered Bypass"* nudge — otherwise it stays out of the way, and you
+can always do everything by **touch**.
 
 ## How it's built
 
@@ -100,8 +104,9 @@ silhouettes per frame, composited **body → face → hair** (hair last, so it f
 over the eyes). At runtime the body recolors to the user's accent, the hair to
 accent ×0.58, and the face stays near-black; sickness tints the body/hair green
 and death swaps in the gravestone. Each life stage has its own body + hair, and
-each mood (neutral/blink, happy/wink, hungry, sick, asleep/Zzz) its own face,
-selected and animated in `apply_pet_art()` in `main/jamagotchi.cpp`.
+each mood (neutral with an occasional blink, happy/`^_^`, hungry, sick, asleep with
+a growing Zzz) its own face, selected and animated in `apply_pet_art()` /
+`pet_frame()` in `main/jamagotchi.cpp`.
 
 The C arrays in `main/assets/c_src/` are generated from `main/assets/png/` by
 `main/assets/convert_assets.py` (`pip install pillow`, then
