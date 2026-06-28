@@ -34,7 +34,7 @@ Each leans on a different thing pitch can tell us, and each has a **touch fallba
 | **Note Runner** | Jam | A **note attack** makes the pet jump obstacles | Tap to jump |
 | **Pitch Steer** | Clean | **Low notes → left, high → right** to sweep the mess | Tap where to move |
 | **Road Dash** | Heal | Hop the pet up across lanes of traffic — **a note attack hops it forward**; dodge the cars | Tap to hop |
-| **Echo** | Settle | Watch a short note sequence, then **play it back** | Tap the sequence |
+| **Echo** | Settle | Tiles flip to reveal a 4-note sequence, then flip back; **play the pad notes in order** to fill them (Wordle-style) | Tap the pad in order |
 
 ### Pitch-selectable menus
 

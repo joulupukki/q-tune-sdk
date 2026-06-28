@@ -117,8 +117,22 @@ static jam_game_t s_game = G_FEED;
 static jama_call_t s_game_need = JAMA_CALL_NONE;
 static int s_round = 0, s_rounds = 0, s_correct = 0, s_score = 0;
 static uint8_t s_target = NC_A;
-static uint8_t s_seq[4]; static int s_seq_len = 0, s_seq_show = 0, s_seq_pos = 0;
-static int s_echo_shown = 0;   // which playback note index is currently displayed
+// Echo (Wordle-style): top row of sequence tiles that flip to reveal, then the
+// player fills them by playing pad notes; a cursor marks the active slot.
+#define ECHO_LEN     4
+#define FLIP_FRAMES   6          // flip animation length (x TICK_MS)
+#define ECHO_STEP_MS  650u       // reveal cadence
+#define ECHO_END_PAUSE_MS 850u   // hold the full sequence before flipping back
+enum { TILE_FACE = 0, TILE_REVEAL, TILE_FILL };
+static uint8_t s_seq[ECHO_LEN]; static int s_seq_len = 0;
+static uint8_t s_answer[ECHO_LEN];
+static lv_obj_t *s_tile[ECHO_LEN]; static lv_obj_t *s_tile_lbl[ECHO_LEN];
+static int s_tile_state[ECHO_LEN]; static uint8_t s_tile_note[ECHO_LEN];
+static bool s_tile_wrong[ECHO_LEN];   // a filled answer tile that didn't match
+static int s_flip_left[ECHO_LEN]; static int s_flip_to[ECHO_LEN]; static uint8_t s_flip_note[ECHO_LEN];
+static int s_echo_phase = 0;     // 0=reveal, 1=flip-back, 2=input
+static int s_echo_idx = 0, s_echo_cursor = 0; static uint32_t s_echo_t0 = 0;
+static uint32_t s_echo_finish_at = 0;   // when to show the score (0 = not yet)
 static uint32_t s_game_t0 = 0, s_game_deadline = 0;
 static int s_py = 0, s_pvy = 0;
 static int s_obst_x = 0; static int s_obst_passed = 0, s_obst_hit = 0;
@@ -236,6 +250,7 @@ static void go_scene(jam_scene_t sc) {
     s_gnote = s_gprog = s_ginstr = s_gbox_note = s_g1 = s_g2 = s_g3 = s_g4 = NULL;
     for (int i = 0; i < 4; i++) { s_choice[i] = NULL; s_disabled[i] = false; }
     for (int i = 0; i < CROSS_LANES; i++) s_car[i] = NULL;
+    for (int i = 0; i < ECHO_LEN; i++) { s_tile[i] = NULL; s_tile_lbl[i] = NULL; s_flip_left[i] = 0; }
     lv_obj_clean(s_root);
 }
 
@@ -570,7 +585,7 @@ static void build_choices(void) {
     for (int i = 0; i < 4; i++) {
         s_choice[i] = make_button(s_root, "?", on_choice, (void *)(intptr_t)i);
         lv_obj_t *lab = lv_obj_get_child(s_choice[i], 0);
-        if (lab) lv_obj_set_style_text_font(lab, &lv_font_montserrat_18, 0);
+        if (lab) lv_obj_set_style_text_font(lab, &lv_font_montserrat_40, 0);   // big, bold-looking
     }
     place_choice_grid();
 }
@@ -595,6 +610,66 @@ static lv_obj_t *game_progress(void) {
     return p;
 }
 
+// --- Echo sequence tiles (Wordle-style) ------------------------------------
+static void echo_tile_geom(int *tw, int *y) {
+    int W = (int)screen_width, gap = 8;
+    int t = (W - (ECHO_LEN + 1) * gap) / ECHO_LEN; if (t > 48) t = 48;
+    *tw = t; *y = is_landscape ? 40 : 58;
+}
+// Render tile i from its state, the in-progress flip width, and the cursor.
+static void echo_tile_apply(int i) {
+    if (!s_tile[i]) return;
+    int tw, y; echo_tile_geom(&tw, &y);
+    int gap = 8, total = ECHO_LEN * tw + (ECHO_LEN - 1) * gap;
+    int x0 = ((int)screen_width - total) / 2;
+    int cx = x0 + i * (tw + gap) + tw / 2;
+    int curw = tw;
+    if (s_flip_left[i] > 0) {                         // squash width to fake a flip
+        float p = (float)(FLIP_FRAMES - s_flip_left[i]) / (float)FLIP_FRAMES;
+        float f = fabsf(2.0f * p - 1.0f);            // 1 -> 0 -> 1
+        curw = (int)(tw * f); if (curw < 2) curw = 2;
+    }
+    lv_obj_set_size(s_tile[i], curw, tw);
+    lv_obj_set_pos(s_tile[i], cx - curw / 2, y);
+    int st = s_tile_state[i];
+    bool cursor = (s_echo_phase == 2 && i == s_echo_cursor);
+    lv_color_t bg, border, fg = lv_color_white(); int bw; const char *txt = "";
+    if (st == TILE_FILL) {                            // your guess: red if wrong, accent if right
+        bg = s_tile_wrong[i] ? lv_palette_main(LV_PALETTE_RED) : accent_color();
+        border = bg; bw = 2; txt = NOTE_TXT[s_tile_note[i]];
+        fg = s_tile_wrong[i] ? lv_color_white() : lv_color_black();
+    } else if (st == TILE_REVEAL) { bg = lv_color_hex(0x303030); border = accent_color(); bw = 2; txt = NOTE_TXT[s_tile_note[i]]; }
+    else                          { bg = lv_color_hex(0x1c1c1c); border = lv_color_hex(0x555555); bw = 2; }
+    if (cursor) { border = lv_color_white(); bw = 3; }
+    lv_obj_set_style_bg_color(s_tile[i], bg, 0);
+    lv_obj_set_style_border_color(s_tile[i], border, 0);
+    lv_obj_set_style_border_width(s_tile[i], bw, 0);
+    if (s_tile_lbl[i]) {
+        lv_label_set_text(s_tile_lbl[i], (curw > tw / 2) ? txt : "");   // hide text mid-flip
+        lv_obj_set_style_text_color(s_tile_lbl[i], fg, 0);
+    }
+}
+static void echo_start_flip(int i, int to_state, uint8_t note) {
+    s_flip_left[i] = FLIP_FRAMES; s_flip_to[i] = to_state; s_flip_note[i] = note;
+}
+// Record a played/tapped pad note into the current cursor slot.
+static void game_finish(void);
+static void echo_input(uint8_t note) {
+    if (s_echo_phase != 2 || s_busy || s_echo_cursor >= s_seq_len) return;
+    s_answer[s_echo_cursor] = note;
+    s_tile_wrong[s_echo_cursor] = !jama_note_matches(note, s_seq[s_echo_cursor]);  // red if wrong
+    echo_start_flip(s_echo_cursor, TILE_FILL, note);
+    s_echo_cursor++;
+    if (s_gprog) { char p[8]; snprintf(p, sizeof p, "%d/%d", s_echo_cursor, s_seq_len); lv_label_set_text(s_gprog, p); }
+    if (s_echo_cursor >= s_seq_len) {
+        int c = 0; for (int i = 0; i < s_seq_len; i++) if (jama_note_matches(s_answer[i], s_seq[i])) c++;
+        s_correct = c; s_score = c * 100 / s_seq_len;
+        // Don't use s_busy here (it would freeze the tile flips). Finish after the
+        // last flip plays + a short pause; the Echo update keeps animating.
+        s_echo_finish_at = qt_uptime_ms() + FLIP_FRAMES * TICK_MS + 600;
+    }
+}
+
 static void build_game(jam_game_t g, jama_call_t need) {
     s_game = g; s_game_need = need;
     s_round = 0; s_correct = 0; s_score = 0;
@@ -615,21 +690,34 @@ static void build_game(jam_game_t g, jama_call_t need) {
             make_instr("Play the note shown - or tap it");
         } break;
         case G_ECHO: {
-            s_seq_len = 4; s_seq_show = 0; s_seq_pos = 0; s_correct = 0; s_echo_shown = 0;
+            s_seq_len = ECHO_LEN; s_correct = 0;
             jama_pick_distinct(s_seq, s_seq_len, 12, qt_random_u32);   // distinct sequence
             make_title("Echo!\nWatch, then repeat");
             s_gprog = game_progress();
-            s_gnote = lv_label_create(s_root);
-            lv_obj_set_style_text_font(s_gnote, &lv_font_montserrat_40, 0);
-            lv_obj_set_style_text_color(s_gnote, lv_color_white(), 0);
-            lv_obj_align(s_gnote, LV_ALIGN_TOP_MID, 0, is_landscape ? 36 : 64);
-            lv_label_set_text(s_gnote, "...");
+            // Top row of sequence tiles (start face-down).
+            int tw, ty; echo_tile_geom(&tw, &ty);
+            for (int i = 0; i < ECHO_LEN; i++) {
+                s_tile[i] = lv_obj_create(s_root); lv_obj_remove_style_all(s_tile[i]);
+                lv_obj_set_style_bg_opa(s_tile[i], LV_OPA_COVER, 0);
+                lv_obj_set_style_border_opa(s_tile[i], LV_OPA_COVER, 0);
+                lv_obj_set_style_radius(s_tile[i], 6, 0);
+                lv_obj_remove_flag(s_tile[i], LV_OBJ_FLAG_SCROLLABLE);
+                lv_obj_remove_flag(s_tile[i], LV_OBJ_FLAG_CLICKABLE);
+                s_tile_lbl[i] = lv_label_create(s_tile[i]);
+                lv_obj_set_style_text_font(s_tile_lbl[i], &lv_font_montserrat_28, 0);
+                lv_obj_center(s_tile_lbl[i]); lv_obj_remove_flag(s_tile_lbl[i], LV_OBJ_FLAG_CLICKABLE);
+                s_tile_state[i] = TILE_FACE; s_flip_left[i] = 0; s_tile_wrong[i] = false;
+                echo_tile_apply(i);
+            }
+            // 2x2 pad: the 4 sequence notes (distinct), shuffled. ALWAYS active —
+            // never coloured or disabled; the player may play a note more than once.
             build_choices();
-            // Pad shows the 4 sequence notes (distinct), shuffled.
-            uint8_t order[4] = {0,1,2,3};
+            uint8_t order[4] = {0, 1, 2, 3};
             for (int i = 3; i > 0; i--) { int j = qt_random_u32() % (i + 1); int t = order[i]; order[i] = order[j]; order[j] = t; }
             for (int i = 0; i < 4; i++) { s_choice_note[i] = s_seq[order[i]]; choice_set_label(i, NOTE_TXT[s_choice_note[i]]); }
-            make_instr("Play them in order (or tap)");
+            s_echo_phase = 0; s_echo_idx = 0; s_echo_cursor = 0; s_echo_t0 = qt_uptime_ms();
+            s_echo_finish_at = 0;
+            make_instr("Watch, then play them in order");
         } break;
         case G_JAM: {
             make_title("Jam Run!\nPlay the box's note (or tap) to jump");
@@ -685,7 +773,7 @@ static void build_game(jam_game_t g, jama_call_t need) {
                 lv_obj_add_event_cb(sp, on_spot, LV_EVENT_CLICKED, (void *)(intptr_t)i);
                 lv_obj_align(sp, LV_ALIGN_CENTER, (i - 1) * (W / 3), is_landscape ? 4 : 10);
                 lv_obj_t *lab = lv_label_create(sp);
-                lv_obj_set_style_text_font(lab, &lv_font_montserrat_18, 0);
+                lv_obj_set_style_text_font(lab, &lv_font_montserrat_28, 0);
                 lv_obj_set_style_text_color(lab, lv_color_white(), 0);
                 lv_label_set_text(lab, NOTE_TXT[s_spot_note[i]]);
                 lv_obj_center(lab); lv_obj_remove_flag(lab, LV_OBJ_FLAG_CLICKABLE);
@@ -730,23 +818,22 @@ static void feed_advance(void) {
     else feed_new_target();
 }
 
+// Choose tile i in Feed (by tap or by playing its note): score, flash, advance.
+static void feed_pick(int i) {
+    if (i < 0 || i > 3) return;
+    bool ok = jama_note_matches(s_choice_note[i], s_target);
+    if (ok) s_correct++;
+    choice_set_bg(i, ok ? 0x2E7D32 : 0x9A1F1F);   // green / red
+    s_busy = true; s_resume_at = qt_uptime_ms() + FEEDBACK_MS;
+}
+
 static void on_choice(lv_event_t *e) {
     if (s_scene != SC_GAME || s_busy) return;
     int i = (int)(intptr_t)lv_event_get_user_data(e);
     if (s_game == G_FEED) {
-        bool ok = jama_note_matches(s_choice_note[i], s_target);
-        if (ok) s_correct++;
-        choice_set_bg(i, ok ? 0x2E7D32 : 0x9A1F1F);   // green / red
-        s_busy = true; s_resume_at = qt_uptime_ms() + FEEDBACK_MS;
+        feed_pick(i);
     } else if (s_game == G_ECHO) {
-        if (s_seq_show < s_seq_len || s_disabled[i] || s_seq_pos >= s_seq_len) return;
-        bool ok = jama_note_matches(s_choice_note[i], s_seq[s_seq_pos]);
-        if (ok) s_correct++;
-        choice_set_bg(i, ok ? 0x2E7D32 : 0x9A1F1F);
-        s_disabled[i] = true; lv_obj_remove_flag(s_choice[i], LV_OBJ_FLAG_CLICKABLE);
-        s_seq_pos++;
-        if (s_gprog) { char p[8]; snprintf(p, sizeof p, "%d/%d", s_seq_pos, s_seq_len); lv_label_set_text(s_gprog, p); }
-        if (s_seq_pos >= s_seq_len) { s_score = s_correct * 100 / s_seq_len; s_busy = true; s_resume_at = qt_uptime_ms() + FEEDBACK_MS; }
+        echo_input(s_choice_note[i]);   // pad tiles stay active; fill the cursor slot
     }
 }
 
@@ -767,39 +854,30 @@ static void on_spot(lv_event_t *e) {
 
 static void game_on_pitch(TunerNoteName note, int octave, float cents, bool onset) {
     if (s_scene != SC_GAME || s_busy) return;
-    (void)octave;
+    (void)octave; (void)cents;
     uint32_t now = qt_uptime_ms();
     switch (s_game) {
-        case G_FEED:
-            // Note-quiz: match by note name only (no in-tune requirement) so it's
-            // responsive — like the firmware's Q-Spawn standby. A brief hold avoids
-            // false hits from passing notes.
+        case G_FEED: {
+            // Only a note that matches one of the 4 tiles counts (right or wrong);
+            // notes not on any tile are ignored and never advance. Match by note
+            // name only (no in-tune requirement); a brief hold avoids stray hits.
             if (note == NOTE_NONE) { s_note_start_ms = 0; return; }
-            if (jama_note_matches((int)note, s_target)) {
-                if (s_note_start_ms == 0) s_note_start_ms = now;
-                if (now - s_note_start_ms >= NOTE_HOLD_MS) {
-                    s_note_start_ms = 0; s_correct++;
-                    // flash the correct choice
-                    for (int i = 0; i < 4; i++) if (jama_note_matches(s_choice_note[i], s_target)) choice_set_bg(i, 0x2E7D32);
-                    s_busy = true; s_resume_at = now + FEEDBACK_MS;
-                }
-            } else s_note_start_ms = 0;
-            break;
+            int hit = -1;
+            for (int i = 0; i < 4; i++) if (jama_note_matches(s_choice_note[i], (int)note)) { hit = i; break; }
+            if (hit < 0) { s_note_start_ms = 0; return; }
+            if (s_note_start_ms == 0) s_note_start_ms = now;
+            if (now - s_note_start_ms >= NOTE_HOLD_MS) { s_note_start_ms = 0; feed_pick(hit); }
+        } break;
         case G_ECHO:
-            if (s_seq_show >= s_seq_len && onset && note != NOTE_NONE && s_seq_pos < s_seq_len) {
-                bool ok = jama_note_matches((int)note, s_seq[s_seq_pos]);
-                if (ok) s_correct++;
-                for (int i = 0; i < 4; i++) if (!s_disabled[i] && jama_note_matches(s_choice_note[i], (int)note)) {
-                    choice_set_bg(i, ok ? 0x2E7D32 : 0x9A1F1F); s_disabled[i] = true;
-                    lv_obj_remove_flag(s_choice[i], LV_OBJ_FLAG_CLICKABLE); break;
-                }
-                s_seq_pos++;
-                if (s_gprog) { char p[8]; snprintf(p, sizeof p, "%d/%d", s_seq_pos, s_seq_len); lv_label_set_text(s_gprog, p); }
-                if (s_seq_pos >= s_seq_len) { s_score = s_correct * 100 / s_seq_len; s_busy = true; s_resume_at = now + FEEDBACK_MS; }
+            // Only notes shown in the 2x2 pad are interpreted; a fresh attack of
+            // such a note fills the current slot.
+            if (s_echo_phase == 2 && onset && note != NOTE_NONE) {
+                for (int i = 0; i < 4; i++)
+                    if (jama_note_matches(s_choice_note[i], (int)note)) { echo_input(s_choice_note[i]); break; }
             }
             break;
         case G_JAM:
-            if (s_jam_running && onset && note != NOTE_NONE && s_py == 0 && jama_note_matches((int)note, s_target)) s_pvy = -9;
+            if (s_jam_running && onset && note != NOTE_NONE && s_py == 0 && jama_note_matches((int)note, s_target)) s_pvy = -13;
             break;
         case G_CLEAN:
             // Play a speck's note (fresh attack) to clear that speck.
@@ -821,27 +899,37 @@ static void game_update(void) {
         if (now < s_resume_at) return;
         s_busy = false;
         if (s_game == G_FEED) { feed_advance(); return; }
-        if (s_game == G_ECHO && s_seq_pos >= s_seq_len) { game_finish(); return; }
-        return;
+        return;   // (Echo finishes via s_echo_finish_at so its flips keep animating)
     }
     switch (s_game) {
-        case G_ECHO:
-            // Playback: show note 1..len, each for a full 750 ms window, THEN switch
-            // to "Your turn!" (idx > len). s_seq_show stays < len until playback ends
-            // so the answer phase isn't enabled while the last note is still showing.
-            if (s_seq_show < s_seq_len) {
-                int idx = (int)((now - s_game_t0) / 750u);   // 0 = lead-in, 1..len = notes
-                if (idx >= 1 && idx <= s_seq_len && idx != s_echo_shown) {
-                    s_echo_shown = idx;
-                    if (s_gnote) lv_label_set_text(s_gnote, NOTE_TXT[s_seq[idx - 1]]);
+        case G_ECHO: {
+            // Animate any in-progress flips (swap face at the midpoint), then run
+            // the phase machine: reveal one-by-one -> flip all back -> input.
+            for (int i = 0; i < ECHO_LEN; i++) {
+                if (s_flip_left[i] > 0) {
+                    int half = FLIP_FRAMES / 2, before = FLIP_FRAMES - s_flip_left[i];
+                    s_flip_left[i]--;
+                    int after = FLIP_FRAMES - s_flip_left[i];
+                    if (before < half && after >= half) { s_tile_state[i] = s_flip_to[i]; s_tile_note[i] = s_flip_note[i]; }
                 }
-                if (idx > s_seq_len) {
-                    s_seq_show = s_seq_len;            // playback done -> enable answers
-                    s_seq_pos = 0; s_correct = 0;
-                    if (s_gnote) lv_label_set_text(s_gnote, "Your turn!");
-                }
+                echo_tile_apply(i);   // also refreshes the cursor highlight
             }
-            break;
+            bool any_flip = false; for (int i = 0; i < ECHO_LEN; i++) if (s_flip_left[i] > 0) any_flip = true;
+            if (s_echo_phase == 0) {                      // reveal
+                if (!any_flip) {
+                    if (s_echo_idx < s_seq_len) {
+                        if (now - s_echo_t0 >= ECHO_STEP_MS) { echo_start_flip(s_echo_idx, TILE_REVEAL, s_seq[s_echo_idx]); s_echo_idx++; s_echo_t0 = now; }
+                    } else if (now - s_echo_t0 >= ECHO_END_PAUSE_MS) {   // hold full sequence, then flip back
+                        s_echo_phase = 1; s_echo_t0 = now;
+                        for (int i = 0; i < ECHO_LEN; i++) echo_start_flip(i, TILE_FACE, 0);
+                    }
+                }
+            } else if (s_echo_phase == 1) {               // flip back to face-down
+                if (!any_flip) { s_echo_phase = 2; s_echo_cursor = 0; }
+            }
+            // All slots filled: let the last flip play, pause, then show the score.
+            if (s_echo_finish_at && now >= s_echo_finish_at) { s_echo_finish_at = 0; game_finish(); }
+        } break;
         case G_JAM: {
             int H = (int)screen_height, ground = H / 4;
             int petx = (int)screen_width / 4;
@@ -868,7 +956,7 @@ static void game_update(void) {
             s_pvy += 1; s_py += s_pvy; if (s_py > 0) { s_py = 0; s_pvy = 0; }
             if (s_g2) lv_obj_align(s_g2, LV_ALIGN_CENTER, -petx, ground - 30 + s_py);
             s_obst_x -= 6;                                        // 20fps -> ~120 px/s
-            if (abs(s_obst_x - petx) < 26 && s_py > -28) {        // hit (not jumped high enough)
+            if (abs(s_obst_x - petx) < 26 && s_py > -32) {        // hit (not above the obstacle)
                 s_obst_hit++; s_obst_x = (int)screen_width + 40;
                 s_target = (uint8_t)(qt_random_u32() % 12); if (s_gbox_note) lv_label_set_text(s_gbox_note, NOTE_TXT[s_target]);
             } else if (s_obst_x < -20) {                          // cleared
@@ -917,7 +1005,7 @@ static void game_update(void) {
 static void on_game_touch(lv_event_t *e) {
     (void)e;
     if (s_scene != SC_GAME || s_busy) return;
-    if (s_game == G_JAM) { if (s_jam_running && s_py == 0) s_pvy = -9; }   // tap anywhere = jump
+    if (s_game == G_JAM) { if (s_jam_running && s_py == 0) s_pvy = -13; }   // tap anywhere = jump
     else if (s_game == G_HEAL) { if (s_cr_step <= CROSS_LANES) s_cr_step++; }  // Road Dash: tap = hop
     // Clean specks are tapped directly (on_spot); Feed/Echo use their buttons.
 }
@@ -1008,4 +1096,5 @@ static void jam_cleanup(void) {
     s_gnote = s_gprog = s_ginstr = s_gbox_note = s_g1 = s_g2 = s_g3 = s_g4 = NULL;
     for (int i = 0; i < 4; i++) s_choice[i] = NULL;
     for (int i = 0; i < CROSS_LANES; i++) s_car[i] = NULL;
+    for (int i = 0; i < ECHO_LEN; i++) { s_tile[i] = NULL; s_tile_lbl[i] = NULL; }
 }
