@@ -18,6 +18,7 @@
 #include "qtune_plugin.h"
 #include "jama_core.h"
 #include "jama_quiz.h"
+#include "assets/c_src/jamagotchi_assets.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -104,8 +105,10 @@ static int       s_menu_pick = -1;
 static uint32_t  s_input_lock_until = 0;
 static bool      s_saw_silence = false;
 
-// Pet scene / call tracking.
-static lv_obj_t *s_body = NULL, *s_eye_l = NULL, *s_eye_r = NULL, *s_mouth = NULL;
+// Pet scene / call tracking. The pet is a stack of three recolored sprites
+// (body -> face -> hair, drawn bottom-to-top) inside a clickable container.
+static lv_obj_t *s_pet_cont = NULL;                                   // clickable, bobs
+static lv_obj_t *s_img_body = NULL, *s_img_face = NULL, *s_img_hair = NULL;
 static lv_obj_t *s_speech = NULL, *s_hint = NULL;
 static jama_call_t s_call = JAMA_CALL_NONE;
 static uint8_t   s_call_note = NC_E;
@@ -246,7 +249,7 @@ static void go_scene(jam_scene_t sc) {
     s_input_lock_until = qt_uptime_ms() + INPUT_LOCK_MS;
     s_saw_silence = false;
     s_busy = false; s_resume_at = 0;
-    s_body = s_eye_l = s_eye_r = s_mouth = s_speech = s_hint = NULL;
+    s_pet_cont = s_img_body = s_img_face = s_img_hair = s_speech = s_hint = NULL;
     s_gnote = s_gprog = s_ginstr = s_gbox_note = s_g1 = s_g2 = s_g3 = s_g4 = NULL;
     for (int i = 0; i < 4; i++) { s_choice[i] = NULL; s_disabled[i] = false; }
     for (int i = 0; i < CROSS_LANES; i++) s_car[i] = NULL;
@@ -280,37 +283,188 @@ static jam_game_t game_for_call(jama_call_t c) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Pet artwork: a stack of recolored A8 sprites drawn bottom-to-top as
+// body -> face -> hair (hair last so it falls over the eyes/brow). The body
+// recolors to the user's accent, the hair to accent x0.58, and the face stays
+// near-black. Sickness tints body+hair green; death swaps in the gravestone.
+// ---------------------------------------------------------------------------
+#define PET_SIZE    80                         // sprite canvas (see assets/convert_assets.py --size)
+#define PET_TOP_Y   (is_landscape ? 10 : 32)   // top-mid y of the pet box
+
+enum { MOOD_NEUTRAL = 0, MOOD_HAPPY, MOOD_HUNGRY, MOOD_SICK, MOOD_ASLEEP, MOOD_COUNT };
+
+typedef struct {
+    const lv_image_dsc_t *body;
+    const lv_image_dsc_t *hair;
+    const lv_image_dsc_t *face[MOOD_COUNT][2];   // [mood][frame]; frame 1 NULL = single frame
+} jama_art_t;
+
+// Indexed by art stage: 0 rookie, 1 busker, 2 openmic, 3 headliner, 4 loungeact.
+static const jama_art_t ART[5] = {
+    {   // rookie
+        &jama_body_rookie, &jama_hair_rookie, {
+            { &jama_face_rookie_neutral_1, &jama_face_rookie_neutral_2 },
+            { &jama_face_rookie_happy_1,   &jama_face_rookie_happy_2   },
+            { &jama_face_rookie_hungry_1,  NULL                        },
+            { &jama_face_rookie_sick_1,    NULL                        },
+            { &jama_face_rookie_asleep_1,  &jama_face_rookie_asleep_2  },
+        }
+    },
+    {   // busker
+        &jama_body_busker, &jama_hair_busker, {
+            { &jama_face_busker_neutral_1, &jama_face_busker_neutral_2 },
+            { &jama_face_busker_happy_1,   &jama_face_busker_happy_2   },
+            { &jama_face_busker_hungry_1,  NULL                        },
+            { &jama_face_busker_sick_1,    NULL                        },
+            { &jama_face_busker_asleep_1,  &jama_face_busker_asleep_2  },
+        }
+    },
+    {   // openmic
+        &jama_body_openmic, &jama_hair_openmic, {
+            { &jama_face_openmic_neutral_1, &jama_face_openmic_neutral_2 },
+            { &jama_face_openmic_happy_1,   &jama_face_openmic_happy_2   },
+            { &jama_face_openmic_hungry_1,  NULL                         },
+            { &jama_face_openmic_sick_1,    NULL                         },
+            { &jama_face_openmic_asleep_1,  &jama_face_openmic_asleep_2  },
+        }
+    },
+    {   // headliner (neutral = sunglasses "cool" face, no blink)
+        &jama_body_headliner, &jama_hair_headliner, {
+            { &jama_face_headliner_cool_1,   NULL                         },
+            { &jama_face_headliner_happy_1,  &jama_face_headliner_happy_2  },
+            { &jama_face_headliner_hungry_1, NULL                         },
+            { &jama_face_headliner_sick_1,   NULL                         },
+            { &jama_face_headliner_asleep_1, &jama_face_headliner_asleep_2 },
+        }
+    },
+    {   // loungeact
+        &jama_body_loungeact, &jama_hair_loungeact, {
+            { &jama_face_loungeact_neutral_1, &jama_face_loungeact_neutral_2 },
+            { &jama_face_loungeact_happy_1,   &jama_face_loungeact_happy_2   },
+            { &jama_face_loungeact_hungry_1,  NULL                          },
+            { &jama_face_loungeact_sick_1,    NULL                          },
+            { &jama_face_loungeact_asleep_1,  &jama_face_loungeact_asleep_2  },
+        }
+    },
+};
+
+static int stage_art_index(uint8_t stage) {
+    switch (stage) {
+        case JAMA_STAGE_BABY:          return 0;   // rookie
+        case JAMA_STAGE_CHILD:         return 1;   // busker
+        case JAMA_STAGE_TEEN:          return 2;   // openmic
+        case JAMA_STAGE_ADULT:         return 3;   // headliner
+        case JAMA_STAGE_ADULT_NEGLECT: return 4;   // loungeact
+        default:                       return 0;
+    }
+}
+
+static int pet_mood(void) {
+    if (s_pet.sleeping)           return MOOD_ASLEEP;
+    if (s_pet.sick)               return MOOD_SICK;
+    if (s_call != JAMA_CALL_NONE) return MOOD_HUNGRY;     // needy/sad while calling
+    if (s_pet.happiness >= 65)    return MOOD_HAPPY;
+    return MOOD_NEUTRAL;
+}
+
+static int pet_frame(int mood, uint32_t now) {
+    switch (mood) {
+        // Frame 0 is eyes-open; frame 1 is the closed-eye blink/wink. Show frame 1
+        // only as a brief flash so the eyes don't strobe.
+        case MOOD_NEUTRAL: return (now < s_blink_until) ? 1 : 0;        // occasional blink
+        case MOOD_HAPPY:   return ((now % 1800u) >= 1560u) ? 1 : 0;     // brief wink ~every 1.8s
+        case MOOD_ASLEEP:  return (int)((now / 700u) % 2u);            // Zzz pulses (eyes stay shut)
+        default:           return 0;
+    }
+}
+
+// Cache of what's currently shown so we only touch LVGL when something changed.
+static int s_art_stage = -1, s_art_mood = -1, s_art_frame = -1;
+static int s_art_dead = -1, s_art_sick = -1;
+static lv_palette_t s_art_pal = LV_PALETTE_NONE;
+
+static void apply_pet_art(bool force) {
+    if (!s_pet_cont || !s_img_body || !s_img_face || !s_img_hair) return;
+    uint32_t now = qt_uptime_ms();
+    bool dead = jama_is_dead(&s_pet);
+
+    if (dead) {
+        if (force || s_art_dead != 1) {
+            lv_image_set_src(s_img_body, &jama_sprite_grave);
+            lv_obj_set_style_image_recolor(s_img_body, lv_color_hex(0x8A8A8A), 0);
+            lv_obj_add_flag(s_img_face, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(s_img_hair, LV_OBJ_FLAG_HIDDEN);
+        }
+        s_art_dead = 1;
+        s_art_stage = s_art_mood = s_art_frame = s_art_sick = -1;
+        return;
+    }
+
+    int si = stage_art_index(s_pet.stage);
+    int mood = pet_mood();
+    int frame = pet_frame(mood, now);
+    if (ART[si].face[mood][frame] == NULL) frame = 0;
+    lv_palette_t pal = qt_get_note_name_palette();
+    bool was_dead = (s_art_dead == 1);
+
+    if (force || was_dead) {                       // (re)build or coming back alive
+        lv_obj_remove_flag(s_img_face, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(s_img_hair, LV_OBJ_FLAG_HIDDEN);
+    }
+    s_art_dead = 0;
+
+    if (force || was_dead || si != s_art_stage) {  // body/hair sprites change per stage
+        lv_image_set_src(s_img_body, ART[si].body);
+        lv_image_set_src(s_img_hair, ART[si].hair);
+    }
+    if (force || was_dead || si != s_art_stage ||
+        (int)s_pet.sick != s_art_sick || pal != s_art_pal) {
+        lv_color_t body_col = s_pet.sick ? lv_color_hex(0x96AA5A) : accent_color();
+        lv_color_t hair_col = lv_color_darken(body_col, 107);      // ~ accent x0.58
+        lv_obj_set_style_image_recolor(s_img_body, body_col, 0);
+        lv_obj_set_style_image_recolor(s_img_hair, hair_col, 0);
+    }
+    if (force || was_dead || si != s_art_stage ||
+        mood != s_art_mood || frame != s_art_frame) {
+        lv_image_set_src(s_img_face, ART[si].face[mood][frame]);
+    }
+    s_art_stage = si; s_art_mood = mood; s_art_frame = frame;
+    s_art_sick = (int)s_pet.sick; s_art_pal = pal;
+}
+
 static void build_pet(void) {
     lv_obj_set_style_bg_color(s_screen, lv_color_black(), 0);
 
-    s_body = lv_obj_create(s_root);
-    lv_obj_remove_style_all(s_body);
-    lv_obj_set_size(s_body, 84, 70);
-    lv_obj_set_style_radius(s_body, 20, 0);
-    lv_obj_set_style_bg_opa(s_body, LV_OPA_COVER, 0);
-    // Set the real colour now so it doesn't flash white before the first tick.
-    lv_obj_set_style_bg_color(s_body,
-        jama_is_dead(&s_pet) ? lv_color_hex(0x555555)
-        : s_pet.sick ? lv_palette_darken(LV_PALETTE_GREEN, 2) : accent_color(), 0);
-    lv_obj_set_style_border_width(s_body, 2, 0);
-    lv_obj_set_style_border_color(s_body, lv_color_black(), 0);
-    lv_obj_align(s_body, LV_ALIGN_TOP_MID, 0, is_landscape ? 14 : 34);
-    lv_obj_remove_flag(s_body, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(s_body, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(s_body, on_respond, LV_EVENT_CLICKED, NULL);
+    int pet_top = PET_TOP_Y;
 
-    s_eye_l = lv_obj_create(s_body); lv_obj_remove_style_all(s_eye_l);
-    lv_obj_set_size(s_eye_l, 10, 10); lv_obj_set_style_radius(s_eye_l, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(s_eye_l, lv_color_black(), 0); lv_obj_set_style_bg_opa(s_eye_l, LV_OPA_COVER, 0);
-    lv_obj_align(s_eye_l, LV_ALIGN_CENTER, -18, -8); lv_obj_remove_flag(s_eye_l, LV_OBJ_FLAG_CLICKABLE);
-    s_eye_r = lv_obj_create(s_body); lv_obj_remove_style_all(s_eye_r);
-    lv_obj_set_size(s_eye_r, 10, 10); lv_obj_set_style_radius(s_eye_r, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(s_eye_r, lv_color_black(), 0); lv_obj_set_style_bg_opa(s_eye_r, LV_OPA_COVER, 0);
-    lv_obj_align(s_eye_r, LV_ALIGN_CENTER, 18, -8); lv_obj_remove_flag(s_eye_r, LV_OBJ_FLAG_CLICKABLE);
-    s_mouth = lv_obj_create(s_body); lv_obj_remove_style_all(s_mouth);
-    lv_obj_set_size(s_mouth, 26, 5); lv_obj_set_style_radius(s_mouth, 2, 0);
-    lv_obj_set_style_bg_color(s_mouth, lv_color_black(), 0); lv_obj_set_style_bg_opa(s_mouth, LV_OPA_COVER, 0);
-    lv_obj_align(s_mouth, LV_ALIGN_CENTER, 0, 16); lv_obj_remove_flag(s_mouth, LV_OBJ_FLAG_CLICKABLE);
+    s_pet_cont = lv_obj_create(s_root);
+    lv_obj_remove_style_all(s_pet_cont);
+    lv_obj_set_size(s_pet_cont, PET_SIZE, PET_SIZE);
+    lv_obj_align(s_pet_cont, LV_ALIGN_TOP_MID, 0, pet_top);
+    lv_obj_remove_flag(s_pet_cont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_pet_cont, LV_OBJ_FLAG_CLICKABLE);   // tap to answer a call / restart
+    lv_obj_add_event_cb(s_pet_cont, on_respond, LV_EVENT_CLICKED, NULL);
+
+    // body (back) -> face (middle) -> hair (front). All share the 96x96 canvas
+    // so they register exactly; added in z-order so hair draws over the face.
+    s_img_body = lv_image_create(s_pet_cont);
+    lv_obj_center(s_img_body);
+    lv_obj_remove_flag(s_img_body, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_image_recolor_opa(s_img_body, LV_OPA_COVER, 0);
+
+    s_img_face = lv_image_create(s_pet_cont);
+    lv_obj_center(s_img_face);
+    lv_obj_remove_flag(s_img_face, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_image_recolor(s_img_face, lv_color_hex(0x101010), 0);   // near-black, never tinted
+    lv_obj_set_style_image_recolor_opa(s_img_face, LV_OPA_COVER, 0);
+
+    s_img_hair = lv_image_create(s_pet_cont);
+    lv_obj_center(s_img_hair);
+    lv_obj_remove_flag(s_img_hair, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_image_recolor_opa(s_img_hair, LV_OPA_COVER, 0);
+
+    apply_pet_art(true);   // set real sprites + colors now so nothing flashes white
 
     s_speech = lv_label_create(s_root);
     lv_obj_set_style_text_font(s_speech, &lv_font_montserrat_18, 0);
@@ -318,7 +472,7 @@ static void build_pet(void) {
     lv_obj_set_style_text_align(s_speech, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_long_mode(s_speech, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(s_speech, lv_pct(90));
-    lv_obj_align(s_speech, LV_ALIGN_TOP_MID, 0, is_landscape ? 92 : 116);
+    lv_obj_align(s_speech, LV_ALIGN_TOP_MID, 0, pet_top + PET_SIZE + (is_landscape ? 8 : 16));
     lv_label_set_text(s_speech, "");
 
     s_hint = lv_label_create(s_root);
@@ -367,8 +521,11 @@ static void update_pet(void) {
         } else lv_label_set_text(s_speech, jama_stage_name(s_pet.stage));
     }
     if (s_hint) {
-        // Only nudge about Buffered Bypass when we haven't actually heard the guitar.
-        lv_label_set_text(s_hint, (calling && !pitch_available())
+        // Only nudge about Buffered Bypass when we're calling, haven't actually
+        // heard the guitar, AND monitoring/buffered-bypass isn't already enabled
+        // (if it is, the tip is wrong — the pet simply hasn't been played yet).
+        bool monitoring = qt_get_monitoring_mode() != 0;
+        lv_label_set_text(s_hint, (calling && !pitch_available() && !monitoring)
             ? "Tip: enable Buffered Bypass" : "");
     }
 
@@ -376,20 +533,14 @@ static void update_pet(void) {
     if (calling) menu_set(&s_call_note, 1);
     else s_menu_n = 0;
 
-    if (s_body) {
-        lv_color_t col = accent_color();
-        if (dead) col = lv_color_hex(0x555555);
-        else if (s_pet.sick) col = lv_palette_darken(LV_PALETTE_GREEN, 2);
-        lv_obj_set_style_bg_color(s_body, col, 0);
-        bool blink = now < s_blink_until;
-        if (now >= s_next_blink) { s_blink_until = now + 120; s_next_blink = now + 2000 + (qt_random_u32() % 2500); }
-        bool hide_eyes = blink || s_pet.sleeping || dead;
-        if (s_eye_l) { if (hide_eyes) lv_obj_add_flag(s_eye_l, LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(s_eye_l, LV_OBJ_FLAG_HIDDEN); }
-        if (s_eye_r) { if (hide_eyes) lv_obj_add_flag(s_eye_r, LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(s_eye_r, LV_OBJ_FLAG_HIDDEN); }
-        if (s_mouth) lv_obj_set_width(s_mouth, 14 + s_pet.happiness / 6);
-        int base = is_landscape ? 14 : 34;
+    // Schedule the occasional blink (the neutral face's closed-eye frame), refresh
+    // the recolored sprite stack, then bob the pet gently while it's awake.
+    if (now >= s_next_blink) { s_blink_until = now + 140; s_next_blink = now + 2200 + (qt_random_u32() % 2600); }
+    apply_pet_art(false);
+    if (s_pet_cont) {
+        int base = PET_TOP_Y;
         int dy = (!dead && !s_pet.sleeping) ? (int)roundf(3.0f * sinf((float)now / 260.0f)) : 0;
-        lv_obj_align(s_body, LV_ALIGN_TOP_MID, 0, base + dy);
+        lv_obj_align(s_pet_cont, LV_ALIGN_TOP_MID, 0, base + dy);
     }
 }
 
@@ -402,7 +553,7 @@ static void on_menu_pick(lv_event_t *e) { go_scene(SC_GAME); build_game((jam_gam
 static void on_menu_back(lv_event_t *e) { (void)e; go_scene(SC_PET); build_pet(); }
 
 static lv_obj_t *make_tile(const char *name, const char *note, lv_event_cb_t cb, void *ud,
-                           int x, int y, int w, int h) {
+                           int x, int y, int w, int h, const lv_font_t *note_font) {
     lv_obj_t *b = lv_obj_create(s_root);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, h);
@@ -420,7 +571,7 @@ static lv_obj_t *make_tile(const char *name, const char *note, lv_event_cb_t cb,
     lv_obj_align(nm, LV_ALIGN_TOP_MID, 0, 8);
     lv_obj_remove_flag(nm, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_t *nt = lv_label_create(b);
-    lv_obj_set_style_text_font(nt, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(nt, note_font ? note_font : &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(nt, accent_color(), 0);
     lv_label_set_text(nt, note);
     lv_obj_align(nt, LV_ALIGN_BOTTOM_MID, 0, -8);
@@ -447,7 +598,7 @@ static void build_menu(void) {
         char nt[8]; snprintf(nt, sizeof nt, "(%s)", NOTE_TXT[NOTES[i]]);
         int x = gap + c * (w + gap);
         int y = top + gap + r * (h + gap);
-        make_tile(NAMES[i], nt, on_menu_pick, (void *)(intptr_t)i, x, y, w, h);
+        make_tile(NAMES[i], nt, on_menu_pick, (void *)(intptr_t)i, x, y, w, h, &lv_font_montserrat_28);
     }
     lv_obj_t *back = make_button(s_root, "Back", on_menu_back, NULL);
     lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
@@ -530,9 +681,11 @@ static void build_result(jama_call_t need, int score) {
     int h = w; if (h > 96) h = 96;
     int gx = (W - (w * 2 + gap)) / 2;
     int gy = H - h - 14;
-    make_tile("Try Again", "(A)", on_result_retry, NULL, gx, gy, w, h);
-    make_tile("Continue",  "(E)", on_result_cont,  NULL, gx + w + gap, gy, w, h);
-    static const uint8_t notes[2] = { NC_A, NC_E };
+    make_tile("Try Again", "(A#)", on_result_retry, NULL, gx, gy, w, h, &lv_font_montserrat_48);
+    make_tile("Continue",  "(F)",  on_result_cont,  NULL, gx + w + gap, gy, w, h, &lv_font_montserrat_48);
+    // Deliberate fretted notes (A#, F) instead of open strings, which are easy to
+    // trigger by accident.
+    static const uint8_t notes[2] = { 1, 8 };   // A#, F
     menu_set(notes, 2);
 }
 static void result_consume_pick(void) {
@@ -561,9 +714,11 @@ static void clean_spot(int i);
 static int place_choice_grid(void) {
     int W = (int)screen_width, H = (int)screen_height, gap = 12;
     int bw = (W - 3 * gap) / 2; if (bw > 130) bw = 130;
-    int bh = is_landscape ? 46 : 60;
+    int bh = is_landscape ? 42 : 60;        // shorter buttons in landscape leave room
     int gw = bw * 2 + gap, gx = (W - gw) / 2;
-    int gy = H - (bh * 2 + gap) - 42;   // leave room for the instruction line
+    // Sit the grid below the (lowered, font-48) Feed note in landscape; portrait has
+    // more headroom and reserves more space for the instruction line.
+    int gy = H - (bh * 2 + gap) - (is_landscape ? 34 : 42);
     int pos[4][2] = { {0,0},{1,0},{0,1},{1,1} };
     for (int i = 0; i < 4; i++) if (s_choice[i]) {
         lv_obj_set_size(s_choice[i], bw, bh);
@@ -682,9 +837,9 @@ static void build_game(jam_game_t g, jama_call_t need) {
             make_title("Feed time!\nPlay the note");
             s_gprog = game_progress();
             s_gnote = lv_label_create(s_root);
-            lv_obj_set_style_text_font(s_gnote, &lv_font_montserrat_40, 0);
+            lv_obj_set_style_text_font(s_gnote, &lv_font_montserrat_48, 0);
             lv_obj_set_style_text_color(s_gnote, lv_color_white(), 0);
-            lv_obj_align(s_gnote, LV_ALIGN_TOP_MID, 0, is_landscape ? 36 : 64);
+            lv_obj_align(s_gnote, LV_ALIGN_TOP_MID, 0, is_landscape ? 54 : 66);  // clear the 2-line title
             build_choices();
             feed_new_target();
             make_instr("Play the note shown - or tap it");
@@ -773,7 +928,7 @@ static void build_game(jam_game_t g, jama_call_t need) {
                 lv_obj_add_event_cb(sp, on_spot, LV_EVENT_CLICKED, (void *)(intptr_t)i);
                 lv_obj_align(sp, LV_ALIGN_CENTER, (i - 1) * (W / 3), is_landscape ? 4 : 10);
                 lv_obj_t *lab = lv_label_create(sp);
-                lv_obj_set_style_text_font(lab, &lv_font_montserrat_28, 0);
+                lv_obj_set_style_text_font(lab, &lv_font_montserrat_40, 0);   // match Feed's big note
                 lv_obj_set_style_text_color(lab, lv_color_white(), 0);
                 lv_label_set_text(lab, NOTE_TXT[s_spot_note[i]]);
                 lv_obj_center(lab); lv_obj_remove_flag(lab, LV_OBJ_FLAG_CLICKABLE);
@@ -1092,7 +1247,7 @@ static void jam_cleanup(void) {
     s_left_uptime_ms = qt_uptime_ms();
     qt_state_set_blob(JAM_STATE_KEY, &s_pet, sizeof s_pet);
     s_screen = NULL; s_root = NULL;
-    s_body = s_eye_l = s_eye_r = s_mouth = s_speech = s_hint = NULL;
+    s_pet_cont = s_img_body = s_img_face = s_img_hair = s_speech = s_hint = NULL;
     s_gnote = s_gprog = s_ginstr = s_gbox_note = s_g1 = s_g2 = s_g3 = s_g4 = NULL;
     for (int i = 0; i < 4; i++) s_choice[i] = NULL;
     for (int i = 0; i < CROSS_LANES; i++) s_car[i] = NULL;

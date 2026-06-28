@@ -90,6 +90,28 @@ built-in sweep. Reset the pet via *Settings → Plugin Data*.
 
 `uid = "qtune.jamagotchi.plxzk4"` keys the saved pet — never change it after
 publishing. Tune the game in `main/jama_config.h`; add a life stage via
-`jama_stage_t` + `jama_stage_name`; swap the primitive pet for line-art later by
-embedding LVGL image `.c` files. Never call `lvgl_port_lock()`; the `lv_timer` is
-deleted in `cleanup()`.
+`jama_stage_t` + `jama_stage_name`. Never call `lvgl_port_lock()`; the `lv_timer`
+is deleted in `cleanup()`.
+
+## Artwork
+
+The pet is drawn from the sprite pack in `main/assets/` — three stacked A8
+silhouettes per frame, composited **body → face → hair** (hair last, so it falls
+over the eyes). At runtime the body recolors to the user's accent, the hair to
+accent ×0.58, and the face stays near-black; sickness tints the body/hair green
+and death swaps in the gravestone. Each life stage has its own body + hair, and
+each mood (neutral/blink, happy/wink, hungry, sick, asleep/Zzz) its own face,
+selected and animated in `apply_pet_art()` in `main/jamagotchi.cpp`.
+
+The C arrays in `main/assets/c_src/` are generated from `main/assets/png/` by
+`main/assets/convert_assets.py` (`pip install pillow`, then
+`python3 convert_assets.py --size 80`); see `main/assets/README.md` for the layer
+model. The build globs `main/` recursively, so the sprite `.c` files compile into
+the `.so` automatically — re-run a clean build (`rm -rf build`) after regenerating.
+
+The sprites are A8 (1 byte/pixel), and the loader caps each plugin's PSRAM
+footprint (~512 KB shared), so **canvas size is the budget lever**: the set is
+rasterized at **80×80** (`--size 80`) to land at ~370 KB. Don't bump it back to
+96×96 (~480 KB of art) or the loader rejects the plugin with *"PSRAM budget
+exceeded."* A4 would halve the bytes but won't work here — the firmware's
+software renderer only recolors A8 alpha images, not A4.

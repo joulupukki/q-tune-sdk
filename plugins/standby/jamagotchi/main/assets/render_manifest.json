@@ -1,0 +1,267 @@
+{
+  "canvas": 96,
+  "layer_order": [
+    "body",
+    "face",
+    "hair"
+  ],
+  "recolor": {
+    "body": "accent",
+    "hair": "accent_x_0.58",
+    "face": "none(#101010)",
+    "sick": {
+      "body": "#96AA5A",
+      "hair": "#96AA5A_x_0.58"
+    },
+    "dead": "use sprite_grave (replaces body+hair+face)"
+  },
+  "stages": {
+    "rookie": {
+      "body": "body_rookie.png",
+      "hair": "hair_rookie.png",
+      "faces": {
+        "neutral": {
+          "files": [
+            "face_rookie_neutral_1.png",
+            "face_rookie_neutral_2.png"
+          ],
+          "fps": 1,
+          "note": "idle: open + blink"
+        },
+        "happy": {
+          "files": [
+            "face_rookie_happy_1.png",
+            "face_rookie_happy_2.png"
+          ],
+          "fps": 2,
+          "note": "bounce/wink"
+        },
+        "hungry": {
+          "files": [
+            "face_rookie_hungry_1.png"
+          ],
+          "fps": 1,
+          "note": "static"
+        },
+        "sick": {
+          "files": [
+            "face_rookie_sick_1.png"
+          ],
+          "fps": 1,
+          "note": "tight-squint wince"
+        },
+        "asleep": {
+          "files": [
+            "face_rookie_asleep_1.png",
+            "face_rookie_asleep_2.png"
+          ],
+          "fps": 1,
+          "note": "Zzz grows"
+        }
+      }
+    },
+    "busker": {
+      "body": "body_busker.png",
+      "hair": "hair_busker.png",
+      "faces": {
+        "neutral": {
+          "files": [
+            "face_busker_neutral_1.png",
+            "face_busker_neutral_2.png"
+          ],
+          "fps": 1,
+          "note": "idle: open + blink"
+        },
+        "happy": {
+          "files": [
+            "face_busker_happy_1.png",
+            "face_busker_happy_2.png"
+          ],
+          "fps": 2,
+          "note": "bounce/wink"
+        },
+        "hungry": {
+          "files": [
+            "face_busker_hungry_1.png"
+          ],
+          "fps": 1,
+          "note": "static"
+        },
+        "sick": {
+          "files": [
+            "face_busker_sick_1.png"
+          ],
+          "fps": 1,
+          "note": "tight-squint wince"
+        },
+        "asleep": {
+          "files": [
+            "face_busker_asleep_1.png",
+            "face_busker_asleep_2.png"
+          ],
+          "fps": 1,
+          "note": "Zzz grows"
+        }
+      }
+    },
+    "openmic": {
+      "body": "body_openmic.png",
+      "hair": "hair_openmic.png",
+      "faces": {
+        "neutral": {
+          "files": [
+            "face_openmic_neutral_1.png",
+            "face_openmic_neutral_2.png"
+          ],
+          "fps": 1,
+          "note": "idle: open + blink"
+        },
+        "happy": {
+          "files": [
+            "face_openmic_happy_1.png",
+            "face_openmic_happy_2.png"
+          ],
+          "fps": 2,
+          "note": "bounce/wink"
+        },
+        "hungry": {
+          "files": [
+            "face_openmic_hungry_1.png"
+          ],
+          "fps": 1,
+          "note": "static"
+        },
+        "sick": {
+          "files": [
+            "face_openmic_sick_1.png"
+          ],
+          "fps": 1,
+          "note": "tight-squint wince"
+        },
+        "asleep": {
+          "files": [
+            "face_openmic_asleep_1.png",
+            "face_openmic_asleep_2.png"
+          ],
+          "fps": 1,
+          "note": "Zzz grows"
+        }
+      }
+    },
+    "headliner": {
+      "body": "body_headliner.png",
+      "hair": "hair_headliner.png",
+      "faces": {
+        "neutral": {
+          "files": [
+            "face_headliner_cool_1.png"
+          ],
+          "fps": 1,
+          "note": "sunglasses idle"
+        },
+        "happy": {
+          "files": [
+            "face_headliner_happy_1.png",
+            "face_headliner_happy_2.png"
+          ],
+          "fps": 2,
+          "note": "bounce/wink"
+        },
+        "hungry": {
+          "files": [
+            "face_headliner_hungry_1.png"
+          ],
+          "fps": 1,
+          "note": "static"
+        },
+        "sick": {
+          "files": [
+            "face_headliner_sick_1.png"
+          ],
+          "fps": 1,
+          "note": "tight-squint wince"
+        },
+        "asleep": {
+          "files": [
+            "face_headliner_asleep_1.png",
+            "face_headliner_asleep_2.png"
+          ],
+          "fps": 1,
+          "note": "Zzz grows"
+        },
+        "cool": {
+          "files": [
+            "face_headliner_cool_1.png"
+          ],
+          "fps": 1,
+          "note": "sunglasses"
+        }
+      }
+    },
+    "loungeact": {
+      "body": "body_loungeact.png",
+      "hair": "hair_loungeact.png",
+      "faces": {
+        "neutral": {
+          "files": [
+            "face_loungeact_neutral_1.png",
+            "face_loungeact_neutral_2.png"
+          ],
+          "fps": 1,
+          "note": "idle: open + blink"
+        },
+        "happy": {
+          "files": [
+            "face_loungeact_happy_1.png",
+            "face_loungeact_happy_2.png"
+          ],
+          "fps": 2,
+          "note": "bounce/wink"
+        },
+        "hungry": {
+          "files": [
+            "face_loungeact_hungry_1.png"
+          ],
+          "fps": 1,
+          "note": "static"
+        },
+        "sick": {
+          "files": [
+            "face_loungeact_sick_1.png"
+          ],
+          "fps": 1,
+          "note": "tight-squint wince"
+        },
+        "asleep": {
+          "files": [
+            "face_loungeact_asleep_1.png",
+            "face_loungeact_asleep_2.png"
+          ],
+          "fps": 1,
+          "note": "Zzz grows"
+        }
+      }
+    }
+  },
+  "icons": {
+    "mess": [
+      "icon_mess.png",
+      "icon_mess_color.png"
+    ],
+    "attention": {
+      "files": [
+        "icon_attention_1.png",
+        "icon_attention_2.png"
+      ],
+      "fps": 3,
+      "note": "pulse"
+    },
+    "medicine": [
+      "icon_medicine.png"
+    ]
+  },
+  "death": {
+    "sprite": "sprite_grave.png"
+  },
+  "layer_order_note": "Composite bottom-to-top: body, then face, then hair. Hair overlaps eyes intentionally."
+}

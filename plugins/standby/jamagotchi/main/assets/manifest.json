@@ -1,0 +1,169 @@
+{
+  "canvas": 96,
+  "layer_order": [
+    "body",
+    "face",
+    "hair"
+  ],
+  "tint": {
+    "body": "accent",
+    "hair": "accent*0.58 (sick/dead: follows body)",
+    "face": "#101010 (never tinted) - drawn BETWEEN body and hair"
+  },
+  "stages": {
+    "rookie": {
+      "body": "body_rookie.png",
+      "hair": "hair_rookie.png",
+      "faces": {
+        "neutral": [
+          "face_rookie_neutral_1.png",
+          "face_rookie_neutral_2.png"
+        ],
+        "happy": [
+          "face_rookie_happy_1.png",
+          "face_rookie_happy_2.png"
+        ],
+        "hungry": [
+          "face_rookie_hungry_1.png"
+        ],
+        "sick": [
+          "face_rookie_sick_1.png"
+        ],
+        "asleep": [
+          "face_rookie_asleep_1.png",
+          "face_rookie_asleep_2.png"
+        ]
+      },
+      "eye_y": 42
+    },
+    "busker": {
+      "body": "body_busker.png",
+      "hair": "hair_busker.png",
+      "faces": {
+        "neutral": [
+          "face_busker_neutral_1.png",
+          "face_busker_neutral_2.png"
+        ],
+        "happy": [
+          "face_busker_happy_1.png",
+          "face_busker_happy_2.png"
+        ],
+        "hungry": [
+          "face_busker_hungry_1.png"
+        ],
+        "sick": [
+          "face_busker_sick_1.png"
+        ],
+        "asleep": [
+          "face_busker_asleep_1.png",
+          "face_busker_asleep_2.png"
+        ]
+      },
+      "eye_y": 40
+    },
+    "openmic": {
+      "body": "body_openmic.png",
+      "hair": "hair_openmic.png",
+      "faces": {
+        "neutral": [
+          "face_openmic_neutral_1.png",
+          "face_openmic_neutral_2.png"
+        ],
+        "happy": [
+          "face_openmic_happy_1.png",
+          "face_openmic_happy_2.png"
+        ],
+        "hungry": [
+          "face_openmic_hungry_1.png"
+        ],
+        "sick": [
+          "face_openmic_sick_1.png"
+        ],
+        "asleep": [
+          "face_openmic_asleep_1.png",
+          "face_openmic_asleep_2.png"
+        ]
+      },
+      "eye_y": 45
+    },
+    "headliner": {
+      "body": "body_headliner.png",
+      "hair": "hair_headliner.png",
+      "faces": {
+        "neutral": [
+          "face_headliner_neutral_1.png",
+          "face_headliner_neutral_2.png"
+        ],
+        "happy": [
+          "face_headliner_happy_1.png",
+          "face_headliner_happy_2.png"
+        ],
+        "hungry": [
+          "face_headliner_hungry_1.png"
+        ],
+        "sick": [
+          "face_headliner_sick_1.png"
+        ],
+        "asleep": [
+          "face_headliner_asleep_1.png",
+          "face_headliner_asleep_2.png"
+        ],
+        "cool": [
+          "face_headliner_cool_1.png"
+        ]
+      },
+      "eye_y": 45
+    },
+    "loungeact": {
+      "body": "body_loungeact.png",
+      "hair": "hair_loungeact.png",
+      "faces": {
+        "neutral": [
+          "face_loungeact_neutral_1.png",
+          "face_loungeact_neutral_2.png"
+        ],
+        "happy": [
+          "face_loungeact_happy_1.png",
+          "face_loungeact_happy_2.png"
+        ],
+        "hungry": [
+          "face_loungeact_hungry_1.png"
+        ],
+        "sick": [
+          "face_loungeact_sick_1.png"
+        ],
+        "asleep": [
+          "face_loungeact_asleep_1.png",
+          "face_loungeact_asleep_2.png"
+        ]
+      },
+      "eye_y": 45
+    }
+  },
+  "icons": {
+    "icon_mess": [
+      "icon_mess.png (white/tintable)",
+      "icon_mess_color.png (brown)"
+    ],
+    "icon_attention": [
+      "icon_attention_1.png",
+      "icon_attention_2.png"
+    ],
+    "icon_medicine": [
+      "icon_medicine.png"
+    ],
+    "sprite_grave": [
+      "sprite_grave.png"
+    ]
+  },
+  "notes": "Headliner uses sunglasses as its neutral/cool face.",
+  "sick_face": "tight-squint (>  <) wince + droopy mouth + sweat drop (not x_x)",
+  "hair_styles": {
+    "rookie": "two sprouts",
+    "busker": "Buddy Holly",
+    "openmic": "Neil Young",
+    "headliner": "Johnny Rotten",
+    "loungeact": "Brian Wilson mop+beard"
+  },
+  "layer_order_note": "Hair draws ON TOP of the face so it falls over the eyes/brow. Order: body (bottom) -> face -> hair (top)."
+}

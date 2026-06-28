@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""
+convert_assets.py — Jamagotchi sprite -> LVGL v9 C array converter.
+
+Converts every PNG in ./png to a single-channel **A8** (alpha-only) LVGL image
+descriptor in ./c_src, then writes jamagotchi_assets.h indexing them all.
+
+Why A8: bodies/hair/faces are one flat color (white or near-black). We keep only
+the alpha channel; the firmware recolors body+hair at runtime (accent and
+accent*0.58) and draws the face in near-black. icon_mess_color.png is the one
+exception (it's colored) and is emitted as ARGB8888.
+
+Usage:
+    python3 convert_assets.py             # converts all at native size
+    python3 convert_assets.py --size 80   # downscale sprites to fit 80x80 first
+
+--size N downscales any sprite larger than N on its long edge (aspect preserved;
+never upscales, so the small icons are left alone). The Q-Tune plugin loader caps
+a plugin's PSRAM footprint, and A8 data is 1 byte/pixel, so the canvas size is the
+main lever on flash/PSRAM cost: 96x96 = 9216 B/sprite, 80x80 = 6400, 72x72 = 5184.
+The bundled set is generated at 80x80 to stay within the loader's budget.
+
+No third-party dependencies beyond Pillow (pip install pillow).
+Output is LVGL v9 compatible (lv_image_dsc_t, LV_COLOR_FORMAT_A8 / ARGB8888).
+"""
+import os, sys, struct
+from PIL import Image
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PNG  = os.path.join(HERE, "png")
+CSRC = os.path.join(HERE, "c_src")
+os.makedirs(CSRC, exist_ok=True)
+
+# Long-edge cap; sprites larger than this are downscaled (aspect preserved).
+MAX_SIZE = None
+if "--size" in sys.argv:
+    MAX_SIZE = int(sys.argv[sys.argv.index("--size") + 1])
+
+def fit(img):
+    if MAX_SIZE is None:
+        return img
+    w, h = img.size
+    longest = max(w, h)
+    if longest <= MAX_SIZE:
+        return img
+    scale = MAX_SIZE / float(longest)
+    return img.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.LANCZOS)
+
+COLORED = {"icon_mess_color"}   # emit as ARGB8888 instead of A8
+
+def c_ident(name):
+    return "jama_" + name.replace("-", "_")
+
+def emit_a8(name, img):
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    data = bytearray()
+    for y in range(h):
+        for x in range(w):
+            data.append(px[x, y][3])  # alpha only
+    return w, h, "LV_COLOR_FORMAT_A8", data, 1
+
+def emit_argb(name, img):
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    data = bytearray()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            # LVGL ARGB8888 stored B,G,R,A little-endian
+            data += bytes((b, g, r, a))
+    return w, h, "LV_COLOR_FORMAT_ARGB8888", data, 4
+
+def write_c(name, w, h, cf, data, bpp):
+    ident = c_ident(name)
+    stride = w * bpp
+    lines = []
+    lines.append('#include "lvgl.h"')
+    lines.append('#include "jamagotchi_assets.h"')
+    lines.append("")
+    lines.append(f"// {name}  ({w}x{h}, {cf})")
+    lines.append(f"static const uint8_t {ident}_map[] = {{")
+    row = []
+    for i, byte in enumerate(data):
+        row.append(f"0x{byte:02x},")
+        if len(row) == 16:
+            lines.append("    " + "".join(row)); row = []
+    if row: lines.append("    " + "".join(row))
+    lines.append("};")
+    lines.append("")
+    # Give the descriptor external "C" linkage so it resolves when the .c is
+    # compiled with the C++ compiler (Q-Tune builds main/*.c as C++); a bare
+    # file-scope const would otherwise get internal linkage under C++.
+    lines.append("#ifdef __cplusplus")
+    lines.append('extern "C"')
+    lines.append("#endif")
+    lines.append(f"const lv_image_dsc_t {ident} = {{")
+    lines.append("    .header = {")
+    lines.append("        .magic = LV_IMAGE_HEADER_MAGIC,")
+    lines.append(f"        .cf = {cf},")
+    lines.append("        .flags = 0,")
+    lines.append(f"        .w = {w},")
+    lines.append(f"        .h = {h},")
+    lines.append(f"        .stride = {stride},")
+    lines.append("    },")
+    lines.append(f"    .data_size = sizeof({ident}_map),")
+    lines.append(f"    .data = {ident}_map,")
+    lines.append("};")
+    lines.append("")
+    with open(os.path.join(CSRC, f"{ident}.c"), "w") as f:
+        f.write("\n".join(lines))
+    return ident
+
+def main():
+    names = sorted(p[:-4] for p in os.listdir(PNG) if p.endswith(".png") and not p.startswith("_"))
+    idents = []
+    total = 0
+    for name in names:
+        img = fit(Image.open(os.path.join(PNG, f"{name}.png")))
+        if name in COLORED:
+            w, h, cf, data, bpp = emit_argb(name, img)
+        else:
+            w, h, cf, data, bpp = emit_a8(name, img)
+        ident = write_c(name, w, h, cf, data, bpp)
+        idents.append((ident, name, w, h, cf, len(data)))
+        total += len(data)
+        print(f"  {name:32s} {w}x{h:<4} {cf:24s} {len(data):>6d} B")
+
+    # index header
+    hdr = []
+    hdr.append("// Auto-generated by convert_assets.py — Jamagotchi sprite set")
+    hdr.append("#pragma once")
+    hdr.append('#include "lvgl.h"')
+    hdr.append("")
+    hdr.append("#ifdef __cplusplus")
+    hdr.append('extern "C" {')
+    hdr.append("#endif")
+    hdr.append("")
+    for ident, name, *_ in idents:
+        hdr.append(f"extern const lv_image_dsc_t {ident};")
+    hdr.append("")
+    hdr.append("#ifdef __cplusplus")
+    hdr.append("}")
+    hdr.append("#endif")
+    hdr.append("")
+    with open(os.path.join(CSRC, "jamagotchi_assets.h"), "w") as f:
+        f.write("\n".join(hdr))
+
+    print(f"\n{len(idents)} sprites -> {CSRC}")
+    print(f"total flash for sprite data: {total/1024:.1f} KB")
+    print("include jamagotchi_assets.h and add c_src/*.c to your build.")
+
+if __name__ == "__main__":
+    main()

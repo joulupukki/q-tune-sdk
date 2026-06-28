@@ -18,12 +18,13 @@ CONFIG_LV_USE_CLIB_SPRINTF=y
 
 # --- Widgets / fonts: enable what your plugin uses ------------------------
 # Jamagotchi draws the pet/UI from labels + plain lv_obj primitives (no images).
-# Fonts: 14 (stats), 18 (headers/buttons), 28 (echo tiles), 40 (note/pad).
+# Fonts: 14 (stats), 18 (headers/buttons), 28 (echo tiles), 40 (pad/notes), 48 (big note).
 CONFIG_LV_USE_LABEL=y
 CONFIG_LV_FONT_MONTSERRAT_14=y
 CONFIG_LV_FONT_MONTSERRAT_18=y
 CONFIG_LV_FONT_MONTSERRAT_28=y
 CONFIG_LV_FONT_MONTSERRAT_40=y
+CONFIG_LV_FONT_MONTSERRAT_48=y
 
 # --- Shared object support (required) -------------------------------------
 CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=y
