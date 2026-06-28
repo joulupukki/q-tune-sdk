@@ -22,7 +22,8 @@ plugins as relocatable `.so` modules the firmware loads at boot.
 ### Host API surface
 - Screen geometry globals: `screen_width`, `screen_height`, `is_landscape`.
 - User settings: `qt_get_reference_frequency`, `qt_get_in_tune_cents_width`,
-  `qt_get_monitoring_mode`, `qt_get_note_name_palette`, `qt_get_show_cents`.
+  `qt_get_monitoring_mode`, `qt_get_bypass_type` (true vs. buffered bypass),
+  `qt_get_note_name_palette`, `qt_get_show_cents`.
 - Note artwork: `qt_get_note_glyph`, `qt_get_sharp_glyph`, `qt_get_blank_glyph`,
   `qt_note_is_sharp`, and `qt_get_mute_glyph`.
 - Utilities: `qt_uptime_ms` (monotonic time) and `qt_random_u32` (randomness).
@@ -34,7 +35,7 @@ plugins as relocatable `.so` modules the firmware loads at boot.
 - Touchscreen input via the standard LVGL event API
   (`lv_obj_add_event_cb` + `lv_event_get_indev` + `lv_indev_get_point`).
 - Curated LVGL allowlist — see [`docs/ALLOWED_SYMBOLS.md`](docs/ALLOWED_SYMBOLS.md)
-  (226 exported symbols) plus standard libc/libm.
+  (227 exported symbols) plus standard libc/libm.
 
 ### Tooling
 - `docker-build.sh` (macOS/Linux) and `docker-build.ps1` (Windows/PowerShell) —
