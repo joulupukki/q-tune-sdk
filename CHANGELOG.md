@@ -4,6 +4,10 @@ All notable changes to the Q-Tune SDK are documented here. The SDK follows the
 firmware's plugin **ABI version** (currently `1.0`) for binary compatibility; see
 [`COMPATIBILITY.md`](COMPATIBILITY.md).
 
+## 1.0.2 — unreleased
+
+_In development. Changes land here until the next tagged release._
+
 ## 1.0.1 — validator & docs hardening
 
 A tooling-and-docs patch release. **No ABI change** (still ABI `1.0`); existing
