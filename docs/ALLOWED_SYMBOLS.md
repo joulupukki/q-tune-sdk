@@ -111,11 +111,24 @@ In addition to the symbols below, standard C library functions (`printf`, `snpri
 
 ## LVGL fonts
 
-`lv_font_montserrat_14`, `lv_font_montserrat_18`, `lv_font_montserrat_24`, `lv_font_montserrat_26`, `lv_font_montserrat_28`, `lv_font_montserrat_40`, `lv_font_montserrat_48`
+`lv_font_montserrat_14`, `lv_font_montserrat_28`
+
+Only these two sizes are compiled in by default (`template/tuner/sdkconfig.defaults`
+enables `CONFIG_LV_FONT_MONTSERRAT_14` and `_28`; the standby template enables only
+`_28`). Referencing any other size — `lv_font_montserrat_18`, `_24`, `_26`, `_40`,
+`_48` — is a **compile error** (`'lv_font_montserrat_NN' was not declared in this
+scope`), because LVGL only declares the symbol when its `CONFIG_LV_FONT_MONTSERRAT_NN`
+is on. To use another size, enable the matching `CONFIG_LV_FONT_MONTSERRAT_NN=y` in
+your project's `sdkconfig.defaults`, delete `build/`, and rebuild (the font gets
+compiled into your `.so`, adding a little to its size).
 
 ## libc / libm subset
 
 `snprintf`, `vsnprintf`, `strncpy`, `strncmp`, `fabsf`, `roundf`, `floorf`, `ceilf`, `powf`, `log2f`, `logf`, `expf`, `sqrtf`, `fmodf`, `sinf`, `cosf`, `atan2f`
+
+Note: only these are exported. The integer-rounding variants `lroundf` / `llroundf`
+(and other `l*`/`ll*` math functions) are **not** — use `roundf(x)` and cast the
+result to `int` instead.
 
 ## libgcc soft-float / runtime helpers
 

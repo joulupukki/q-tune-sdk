@@ -175,6 +175,20 @@ fails to load (often silently) or crashes the pedal.
     mismatch, their firmware and this SDK checkout are out of sync — point them to
     [`COMPATIBILITY.md`](COMPATIBILITY.md) (don't try to "fix" it by editing the
     pins).
+13. **No global constructors / dynamic static initializers.** The ELF loader does
+    **not** run C++ constructor tables, so any `static`/global that needs runtime
+    initialization makes the firmware **panic at load (`LoadProhibited`), before
+    `init()` ever runs — crashing the whole boot**, not just that plugin. The classic
+    trap is initializing a file-scope static with a *function call*, e.g.
+    `static lv_color_t accent = lv_color_hex(0x2BC4FF);` — `lv_color_hex` isn't
+    `constexpr`, so the compiler emits a global constructor (a `.ctors` section).
+    Keep every file-scope static a **compile-time constant**: declare colours and
+    other computed values uninitialized (`static lv_color_t accent;`) and assign them
+    inside `init()` (the samples do this). The build links fine either way, so the
+    validator now flags any `.ctors`/`.init_array` as a hard error; you can also
+    self-check with `xtensa-esp32s3-elf-readelf -S build/<name>.so | grep -iE
+    'ctors|init_array'` (must print nothing). This is the same C++ static-linkage
+    family as the image-`.c` `extern "C"` gotcha under "Your own images".
 
 ---
 

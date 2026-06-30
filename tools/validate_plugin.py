@@ -248,6 +248,27 @@ def main() -> int:
             errors.append(f"ELF type is {elf['e_type']}, expected ET_DYN "
                           "(shared object). Did the build link with -shared?")
 
+        # Global constructors / dynamic static initializers: the ELF plugin loader
+        # does NOT run constructor/destructor tables. A non-empty one of these
+        # sections means a file-scope `static` was initialized with a non-constant
+        # expression (classically `static lv_color_t c = lv_color_hex(...)`), which
+        # the compiler lowers to a runtime global constructor. The loader can't run
+        # it; the firmware dereferences null while processing the section and panics
+        # at LOAD (LoadProhibited / EXCVADDR 0x00000000) — before init() ever runs,
+        # taking down the whole boot. The .so builds and links fine, so this is the
+        # one structural defect a green build would otherwise hide.
+        CTOR_SECTIONS = (".init_array", ".preinit_array", ".ctors", ".fini_array")
+        for section in elf.iter_sections():
+            if section.name in CTOR_SECTIONS and section["sh_size"] > 0:
+                errors.append(
+                    f"contains a non-empty '{section.name}' section — a global "
+                    "constructor / dynamic static initializer. The ELF plugin "
+                    "loader does not run these, so the pedal crashes at load "
+                    "(LoadProhibited) before init() runs. Make every file-scope "
+                    "`static` a compile-time constant: declare it uninitialized and "
+                    "assign it in init() instead of `= lv_color_hex(...)` or another "
+                    "function call.")
+
         # The loader resolves the descriptor by calling the entry FUNCTION, so it
         # must be present in .dynsym (the data descriptor symbol is invisible to
         # the loader's function-only dlsym).

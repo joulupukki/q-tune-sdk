@@ -11,6 +11,7 @@ This guide covers common build, validation, deployment, and runtime problems and
 | `Docker not found` / `docker: command not found` | Docker isn't installed or not in your PATH | [Install Docker](https://docs.docker.com/get-docker/); restart your terminal after install. If you installed Docker Desktop, make sure it's running. |
 | Build runs but produces no `.so` file | CMake target name mismatch | Ensure your `CMakeLists.txt` `qtune_project_so()` name matches your actual plugin filename |
 | `error: expected…` (C++ syntax) | Typo or missing bracket in your code | Check the line number; look for unclosed braces, missing semicolons, typos in function names |
+| `'lv_font_montserrat_NN' was not declared in this scope` | That font size isn't compiled in — only `lv_font_montserrat_14` and `_28` are enabled by default | Use `14` or `28`, or enable `CONFIG_LV_FONT_MONTSERRAT_NN=y` in your project's `sdkconfig.defaults`, delete `build/`, and rebuild. See `docs/ALLOWED_SYMBOLS.md` → "LVGL fonts" |
 
 ## Validation errors
 
@@ -28,6 +29,7 @@ python3 tools/validate_plugin.py build/<your-plugin>.so
 | `LVGL version mismatch` | `idf_component.yml` not pinned to `==9.2.2` | Edit `idf_component.yml`, set `lvgl/lvgl: "==9.2.2"`, delete `build/`, rebuild |
 | `CONFIG_LV_COLOR_DEPTH mismatch` | Color depth in `sdkconfig.defaults` doesn't match firmware | Ensure `CONFIG_LV_COLOR_DEPTH=16` in your `sdkconfig.defaults`, delete `build/`, rebuild |
 | `Descriptor not found` | Plugin binary is corrupt or not a valid ELF file | Rebuild from scratch; if it persists, check your `.cpp` file is actually being compiled |
+| `contains a non-empty '.ctors'/'.init_array' section` | A file-scope `static` is initialized with a non-`constexpr` function call (e.g. `static lv_color_t c = lv_color_hex(...)`), which compiles to a C++ global constructor the loader can't run — **it would crash the pedal at boot** | Declare the value uninitialized (`static lv_color_t c;`) and assign it inside `init()`. Self-check: `readelf -S build/<name>.so \| grep -iE 'ctors\|init_array'` should print nothing |
 
 ## Deployment issues
 
@@ -89,7 +91,18 @@ If the plugin is crash-quarantined (`.so.disabled`), see "Re-enabling crash-disa
 
 ### Pedal keeps rebooting / crashes on boot
 
-**Cause**: Your plugin crashes during `init()`, so the pedal can't boot normally.
+**Cause**: Your plugin crashes during `init()`, **or at load time** — the firmware
+loads every installed `.so` at boot to populate the menu, so a plugin that faults
+*while being loaded* (e.g. a global constructor it can't run — see the `.ctors` row
+under "Validation errors") crashes the boot before any UI appears. A telltale sign
+is a `Guru Meditation … LoadProhibited` panic with `EXCVADDR 0x00000000` logged
+right after the loader prints your plugin, before any `init` output.
+
+> **Note:** the crash-quarantine described below only counts faults during
+> `init()` / `display_frequency()` of the *selected* plugin. A **load-time** crash
+> is **not** auto-quarantined and will recur on every boot — you must recover with
+> Safe Mode and then fix or remove the plugin. (Rebuild with the current SDK: the
+> validator now rejects the `.ctors` cause before you ever upload.)
 
 **Fix**: Use Safe Mode to bypass all plugins and recover:
 

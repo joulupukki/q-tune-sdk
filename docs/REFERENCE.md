@@ -381,6 +381,15 @@ before you upload. A few high-value gotchas:
 - LVGL 8 compat macros (`lv_img_*`, `lv_obj_clear_flag`, `lv_timer_del`) have no
   ELF symbols; use the LVGL 9 names (`lv_image_*`, `lv_obj_remove_flag`,
   `lv_timer_delete`).
+- **No global constructors / dynamic static initializers.** The ELF loader does not
+  run C++ constructor tables (`.ctors` / `.init_array`). A file-scope `static`
+  initialized with a non-`constexpr` function call — e.g.
+  `static lv_color_t accent = lv_color_hex(0x2BC4FF);` — compiles to a runtime global
+  constructor, and the firmware **panics at load (`LoadProhibited`, `EXCVADDR
+  0x00000000`) before `init()` runs**, taking down the whole boot. Declare such
+  values uninitialized and assign them inside `init()`. The validator (§9) now flags
+  any constructor section as a hard error; self-check with
+  `readelf -S build/<name>.so | grep -iE 'ctors|init_array'`.
 
 
 ### Q-Tune host API (`qtune_plugin_host_api.h`)

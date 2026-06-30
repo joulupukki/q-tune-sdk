@@ -4,6 +4,33 @@ All notable changes to the Q-Tune SDK are documented here. The SDK follows the
 firmware's plugin **ABI version** (currently `1.0`) for binary compatibility; see
 [`COMPATIBILITY.md`](COMPATIBILITY.md).
 
+## 1.0.1 — validator & docs hardening
+
+A tooling-and-docs patch release. **No ABI change** (still ABI `1.0`); existing
+`1.0.0` plugins are unaffected and need no rebuild.
+
+### Tooling
+- `tools/validate_plugin.py` now **rejects a plugin that contains a global
+  constructor / dynamic static initializer** — a non-empty `.init_array`,
+  `.preinit_array`, `.ctors`, or `.fini_array` section. The ELF loader does not run
+  constructor tables, so such a plugin crashes the pedal at load (`LoadProhibited`,
+  `EXCVADDR 0x00000000`) **before `init()` runs**, taking down the whole boot. The
+  classic cause is initializing a file-scope `static` with a non-`constexpr` call
+  (e.g. `static lv_color_t c = lv_color_hex(...)`). A clean build previously hid
+  this; it is now a hard validation error that fails the build.
+
+### Docs
+- `docs/ALLOWED_SYMBOLS.md`: corrected the LVGL font list to the sizes actually
+  compiled in by default (`lv_font_montserrat_14` and `_28`) and documented how to
+  enable others via `CONFIG_LV_FONT_MONTSERRAT_NN`. Noted that `lroundf` /
+  `llroundf` are not exported (use `roundf` and cast).
+- New hard rule **"no global constructors / dynamic static initializers"** in
+  `CLAUDE.md` and `docs/REFERENCE.md`, with the `lv_color_hex`-in-static-init
+  example and a `readelf` self-check.
+- `docs/TROUBLESHOOTING.md`: added rows for the font compile error and the
+  `.ctors` validation error, plus a note that **load-time** crashes are not
+  auto-quarantined and require Safe Mode to recover.
+
 ## 1.0.0 — initial public release
 
 The first public release of the Q-Tune plugin SDK. Build tuner and standby UI
