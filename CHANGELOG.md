@@ -4,9 +4,17 @@ All notable changes to the Q-Tune SDK are documented here. The SDK follows the
 firmware's plugin **ABI version** (currently `1.0`) for binary compatibility; see
 [`COMPATIBILITY.md`](COMPATIBILITY.md).
 
-## 1.0.2 — unreleased
+## 1.0.2 — tuner chrome docs
 
-_In development. Changes land here until the next tagged release._
+A docs-only patch release. **No ABI change** (still ABI `1.0`); existing `1.0.0`
+and `1.0.1` plugins are unaffected and need no rebuild.
+
+### Docs
+- `CLAUDE.md`: the **reference-pitch (A4/Hz) indicator** is now part of the
+  tuner "full chrome" definition-of-done, so it's built as a baseline expectation
+  rather than treated as an optional afterthought. Documents positioning it via
+  `align_reference_pitch_indicator()` (top-right in portrait, bottom-centre in
+  landscape, like `gauge`) instead of accepting the firmware's default placement.
 
 ## 1.0.1 — validator & docs hardening
 

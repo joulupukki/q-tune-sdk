@@ -23,8 +23,12 @@ without being asked, and without asking the user about them:**
 - **Both orientations** — portrait (240×320) *and* landscape (320×240). Never ship
   a UI that only works one way.
 - **(Tuner) the full chrome** — the pitch readout (note + cents), the mute
-  indicator, and the Q-Tune logo settings button, positioned like `gauge`
-  (mute top-left, settings button bottom-right, clear of each other).
+  indicator, the Q-Tune logo settings button, and the firmware's reference-pitch
+  (A4/Hz) indicator, positioned like `gauge` (mute top-left, settings button
+  bottom-right, reference indicator top-right in portrait / bottom-centre in
+  landscape, all clear of each other). Position the reference indicator via
+  `align_reference_pitch_indicator()` rather than leaving it to the firmware's
+  default placement, so it fits your layout.
 - **A responsive feel** — a fast `display_frequency()`, cached state, no per-frame
   object creation. Never sluggish or twitchy.
 - **Respect for the user's settings** — accent color, in-tune width, show-cents,
